@@ -1,0 +1,36 @@
+[build-system]
+# Should be mirrored in requirements-build.txt
+requires = [
+    "setuptools",
+    "wheel",
+    "facebook-scribe==2.0.post1",
+    "thrift",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pybragi"
+version = "2024.09.18"
+description = "pybragi is server framework"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+]
+dependencies = [
+    "requests",
+    "numpy",
+]
+
+[project.optional-dependencies]
+base = ["fastapi", "pillow", "psutil", "pydantic",
+        "nvidia-ml-py", "pymongo>=3.4.0", 
+       ]
+openai = ["openai>=1.0", "tiktoken"]
+anthropic = ["anthropic>=0.20.0"]
+litellm = ["litellm>=1.0.0"]
+test = ["jsonlines", "matplotlib", "pandas"]
+all = ["pybragi[srt]", "pybragi[openai]", "pybragi[anthropic]", "pybragi[litellm]"]
+dev = ["pybragi[all]", "pybragi[test]"]

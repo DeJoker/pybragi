@@ -1,0 +1,15 @@
+
+psutil>=5.9.1
+tornado>=6.0.2
+pymongo>=3.4.0
+ujson>=1.35
+kafka-python>=2.0.2
+requests>=2.22.0
+prometheus_client>=0.14.1
+facebook-scribe==2.0.post1
+thrift
+opencv-python>=4.4.0
+numpy
+pillow
+fastapi
+uvicorn

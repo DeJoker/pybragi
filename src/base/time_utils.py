@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
+from concurrent.futures import ThreadPoolExecutor, _base
+import logging
+import time
+from contextlib import ContextDecorator
+from datetime import datetime
+import inspect
+from functools import wraps, partial
+import traceback
+from typing import Callable, Optional
+
+# old deprecate use elapsed_time_limit instead
+def elapsed_time(func):
+    @wraps(func)
+    def inner(*args, **kwargs):
+        start = time.time()
+        res = func(*args, **kwargs)
+        end = time.time()
+
+        module_name = func.__module__
+        if '.' in module_name:
+            module_name = module_name.split('.')[-1]
+
+        # logging.info(f'func: {func.__name__} took: {end-start:2.4f} sec')
+        # logging.info('{} cost {}s'.format(func.__name__, end-start))
+        logging.info(f'{func.__module__}.{func.__name__} cost {end-start:.3f}s')
+        return res
+    return inner
+
+
+# old deprecate use elapsed_time_limit instead
+def elapsed_time_callback(callback: Optional[Callable] = None):
+    def decorator(func):
+        @wraps(func)
+        def inner(*args, **kwargs):
+            start = time.time()
+            res = func(*args, **kwargs)
+            end = time.time()
+
+            # logging.info(f'func: {func.__name__} took: {end-start:2.4f} sec')
+            # logging.info('{} cost {}s'.format(func.__name__, end-start))
+            logging.info(f'{func.__module__}.{func.__name__} cost {end-start:.3f}s')
+            if callback:
+                callback(end-start)
+            return res
+        return inner
+    return decorator
+
+# callback: Callable | None = None
+def elapsed_time_limit(limit, callback: Optional[Callable] = None):
+    def decorator(func):
+        @wraps(func)
+        def inner(*args, **kwargs):
+            start = time.time()
+            res = func(*args, **kwargs)
+            end = time.time()
+
+            if end-start > limit:
+                logging.warning(f'{func.__module__}.{func.__name__} cost {end-start:.3f} sec')
+            
+            if callback:
+                callback(end-start) 
+            return res
+        return inner
+    return decorator
+
+
+executor_timeout = ThreadPoolExecutor(max_workers=1)
+def timeout_limit(timeout):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            future = executor_timeout.submit(func, *args, **kwargs)
+            try:
+                return future.result(timeout=timeout)
+            except _base.TimeoutError:
+                logging.warning(f"'{func.__module__}.{func.__name__}' timed out after {timeout} seconds.")
+            except:
+                traceback.print_exc()
+        return wrapper
+    return decorator
+
+
+class ElapseCtx(ContextDecorator):
+    # context manager
+    # 用上下文管理器计时
+    # https://stackoverflow.com/questions/70059794/get-function-name-when-contextdecorator-is-used-as-a-decorator
+    # https://stackoverflow.com/questions/54539337/getting-line-number-of-return-statement
+    def __init__(self, label: str = "", gt=0.0, callback=None):
+        self.label = label
+        self.gt = gt
+        self.callback = callback
+
+    def __call__(self, func):
+        if not self.label:  # Label was not provided
+            self.label = func.__name__  # Use function's name.
+        return super().__call__(func)
+
+    def __enter__(self):
+        self.t0 = time.time()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        elapse = round(time.time()-self.t0, 3)
+        if elapse >= self.gt:
+            logging.info(f'{self.label} cost: {elapse:.3f}s')
+        if self.callback:
+            self.callback(elapse)
