@@ -6,7 +6,8 @@ from tornado.concurrent import run_on_executor
 
 import json
 from datetime import datetime
-from . import metrics
+# from . import metrics
+import metrics
 
 
 class Echo(metrics.PrometheusMixIn):
@@ -22,6 +23,10 @@ class Echo(metrics.PrometheusMixIn):
 class HealthCheckHandler(metrics.PrometheusMixIn):
     executor = ThreadPoolExecutor(1)
 
+    # https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.initialize
+    def initialize(self, name=""):
+        self.name = name
+
     def _log(self):
         return
 
@@ -35,6 +40,7 @@ class HealthCheckHandler(metrics.PrometheusMixIn):
             "ret": 1,
             "errcode": 1,
             "data": {
+                "name": self.name,
                 "timestamp": int(now.timestamp()),
                 "timestamp-str": now.strftime("%Y-%m-%d %H:%M:%S"),
             },
@@ -56,7 +62,7 @@ def make_tornado_web(service=""):
     app = web.Application(
         [
             (r"/echo", Echo),
-            (r"/healthcheck", HealthCheckHandler),
+            (r"/healthcheck", HealthCheckHandler, dict(name=service)),
             (r"/metrics", metrics.MetricsHandler),
         ]
     )

@@ -106,3 +106,23 @@ class ElapseCtx(ContextDecorator):
             logging.info(f'{self.label} cost: {elapse:.3f}s')
         if self.callback:
             self.callback(elapse)
+
+
+
+#######################################################################
+import datetime
+
+def pretty_delta(total_seconds=0):
+    delta = datetime.timedelta(seconds=total_seconds)
+    
+    from_ts = int(time.time()) - total_seconds
+    from_dt = datetime.datetime.fromtimestamp(from_ts)
+    
+    hours, remainder = divmod(delta.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    delta_ts = f"{delta.days} day {hours}:{minutes}:{seconds}"
+    if delta.days <= 0:
+        delta_ts = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        
+    return delta.days, delta_ts, from_dt.strftime("%Y-%m-%d %H:%M:%S")
+

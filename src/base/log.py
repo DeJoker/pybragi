@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 from . import scribe_log
 
-format = "%(levelname)s %(asctime)s.%(msecs)03d [%(process)d-%(threadName)s] (%(filename)s:%(lineno)03d) %(message)s"
+format = "%(levelname)s %(asctime)s.%(msecs)03d [%(process)d-%(threadName)s] (%(funcName)s@%(filename)s:%(lineno)03d) %(message)s"
 datefmt = "%Y-%m-%d %H:%M:%S"
 
 logging.basicConfig(format=format, datefmt=datefmt, level=logging.INFO, handlers=[logging.StreamHandler()])

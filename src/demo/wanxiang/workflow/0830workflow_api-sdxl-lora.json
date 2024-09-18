@@ -1,0 +1,153 @@
+{
+  "3": {
+    "inputs": {
+      "seed": 717489724996208,
+      "steps": 30,
+      "cfg": 7,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1,
+      "model": [
+        "154",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "latent_image": [
+        "156",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "4": {
+    "inputs": {
+      "ckpt_name": "sd-models/NijiXL_anime_style2.1.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "impasto,nijisusan, 1gril, masterpiece, best quality,full body, long shot, at night, lying on bed sofa, sleeping, on_side, mess hair, facing the viewer, purple dress,  medium hair, covered by a blanket",
+      "clip": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "prositive_prompt"
+    }
+  },
+  "7": {
+    "inputs": {
+      "text": "(worst quality, low quality:1.4),(malformed hands:1.4),(poorly drawn hands:1.4),(mutated fingers:1.4),(extra limbs:1.35),(poorly drawn face:1.4),bad leg,strange leg,",
+      "clip": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "negative_prompt"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "17": {
+    "inputs": {
+      "stop_at_clip_layer": -2,
+      "clip": [
+        "154",
+        1
+      ]
+    },
+    "class_type": "CLIPSetLastLayer",
+    "_meta": {
+      "title": "CLIP Set Last Layer"
+    }
+  },
+  "52": {
+    "inputs": {
+      "filename_prefix": "susan/susan-text-2-image-test",
+      "images": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "152": {
+    "inputs": {
+      "model_name": "4x-UltraSharp15_4x_foolhardy_Remacri60_lollypop25.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Load Upscale Model"
+    }
+  },
+  "154": {
+    "inputs": {
+      "lora_01": "sd-loras/niji-style2.1-susan-3.safetensors",
+      "strength_01": 0.9,
+      "lora_02": "sd-loras/Detail-Tweaker-XL-v1.0.safetensors",
+      "strength_02": 1.5,
+      "lora_03": "sd-loras/SDXL_Niji_V6_DLC_LoRa_V4.safetensors",
+      "strength_03": 0.8,
+      "lora_04": "None",
+      "strength_04": 1,
+      "model": [
+        "4",
+        0
+      ],
+      "clip": [
+        "4",
+        1
+      ]
+    },
+    "class_type": "Lora Loader Stack (rgthree)",
+    "_meta": {
+      "title": "Lora Loader Stack (rgthree)"
+    }
+  },
+  "156": {
+    "inputs": {
+      "width": 832,
+      "height": 1472,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  }
+}

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
+import logging
 import time
 import prometheus_client as pc
 from tornado import web
-
+from tornado.concurrent import run_on_executor
+from concurrent.futures import ThreadPoolExecutor
 # http://172.20.20.5:5302/metrics 参考test-chat-core服务
 
 
@@ -117,14 +119,17 @@ def register_metrics(name: str):
 
 
 class MetricsHandler(web.RequestHandler):
+    executor = ThreadPoolExecutor(1)
     def _log(self):
         return
 
+    @run_on_executor
     def get(self):
         self.set_header("Content-Type", pc.CONTENT_TYPE_LATEST)
         self.write(pc.generate_latest())
 
 
+pass_path = ["/healthcheck", "/metrics"]
 class PrometheusMixIn(web.RequestHandler):
     def on_finish(self):
         path = self.request.path
@@ -134,7 +139,13 @@ class PrometheusMixIn(web.RequestHandler):
 
         get_metrics_manager().request_histogram.labels(
             metrics_manager.server_name, path
-        ).observe(request_time*1000)
+        ).observe(request_time)
         get_metrics_manager().request_qps.labels(
             metrics_manager.server_name, path
         ).inc()
+    
+    def write(self, chunk):
+        if self.request.path not in pass_path:
+            logging.info(f"{chunk}")
+        super().write(chunk)
+

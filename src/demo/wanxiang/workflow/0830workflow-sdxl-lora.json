@@ -1,0 +1,695 @@
+{
+  "last_node_id": 156,
+  "last_link_id": 49,
+  "nodes": [
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "pos": [
+        1345,
+        130
+      ],
+      "size": {
+        "0": 400,
+        "1": 200
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 28
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            25,
+            48
+          ],
+          "shape": 3
+        }
+      ],
+      "title": "prositive_prompt",
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "impasto,nijisusan, 1gril, masterpiece, best quality,full body, long shot, at night, lying on bed sofa, sleeping, on_side, mess hair, facing the viewer, purple dress,  medium hair, covered by a blanket"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "pos": [
+        1345,
+        460
+      ],
+      "size": {
+        "0": 400,
+        "1": 200
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 29
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            26,
+            41
+          ],
+          "shape": 3
+        }
+      ],
+      "title": "negative_prompt",
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "(worst quality, low quality:1.4),(malformed hands:1.4),(poorly drawn hands:1.4),(mutated fingers:1.4),(extra limbs:1.35),(poorly drawn face:1.4),bad leg,strange leg,"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [
+        2260,
+        130
+      ],
+      "size": {
+        "0": 210,
+        "1": 46
+      },
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 30
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 31
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            33,
+            38
+          ],
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      }
+    },
+    {
+      "id": 4,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        14,
+        238
+      ],
+      "size": {
+        "0": 491.4577331542969,
+        "1": 98
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            45
+          ],
+          "shape": 3
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            46
+          ],
+          "shape": 3
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            31,
+            42
+          ],
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple"
+      },
+      "widgets_values": [
+        "sd-models/NijiXL_anime_style2.1.safetensors"
+      ]
+    },
+    {
+      "id": 17,
+      "type": "CLIPSetLastLayer",
+      "pos": [
+        930,
+        52
+      ],
+      "size": {
+        "0": 315,
+        "1": 58
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 32
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            28,
+            29
+          ],
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPSetLastLayer"
+      },
+      "widgets_values": [
+        -2
+      ]
+    },
+    {
+      "id": 156,
+      "type": "EmptyLatentImage",
+      "pos": [
+        1832,
+        480
+      ],
+      "size": {
+        "0": 315,
+        "1": 106
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            27
+          ],
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage"
+      },
+      "widgets_values": [
+        832,
+        1472,
+        1
+      ]
+    },
+    {
+      "id": 152,
+      "type": "UpscaleModelLoader",
+      "pos": [
+        2659,
+        62
+      ],
+      "size": {
+        "0": 482.9213562011719,
+        "1": 58
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "UPSCALE_MODEL",
+          "type": "UPSCALE_MODEL",
+          "links": [
+            43
+          ],
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UpscaleModelLoader"
+      },
+      "widgets_values": [
+        "4x-UltraSharp15_4x_foolhardy_Remacri60_lollypop25.pth"
+      ]
+    },
+    {
+      "id": 153,
+      "type": "PreviewImage",
+      "pos": [
+        3015,
+        169
+      ],
+      "size": {
+        "0": 326.5760498046875,
+        "1": 637.27490234375
+      },
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 44
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
+      "id": 151,
+      "type": "UltimateSDUpscale",
+      "pos": [
+        2645,
+        173
+      ],
+      "size": {
+        "0": 315,
+        "1": 614
+      },
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 38
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 49
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 48
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 41
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 42
+        },
+        {
+          "name": "upscale_model",
+          "type": "UPSCALE_MODEL",
+          "link": 43
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            44
+          ],
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UltimateSDUpscale"
+      },
+      "widgets_values": [
+        1.56,
+        691937301253867,
+        "fixed",
+        30,
+        7,
+        "dpmpp_2m",
+        "karras",
+        0.3,
+        "Chess",
+        1024,
+        1024,
+        8,
+        32,
+        "Half Tile + Intersections",
+        1,
+        64,
+        8,
+        16,
+        true,
+        false
+      ]
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "pos": [
+        1845,
+        130
+      ],
+      "size": {
+        "0": 315,
+        "1": 262
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 47
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 25
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 26
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 27
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            30
+          ],
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        717489724996208,
+        "fixed",
+        30,
+        7,
+        "dpmpp_2m",
+        "karras",
+        1
+      ]
+    },
+    {
+      "id": 154,
+      "type": "Lora Loader Stack (rgthree)",
+      "pos": [
+        558,
+        150
+      ],
+      "size": [
+        413.30535961459475,
+        246
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 45
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 46
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            47,
+            49
+          ],
+          "shape": 3
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            32
+          ],
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Lora Loader Stack (rgthree)"
+      },
+      "widgets_values": [
+        "sd-loras/niji-style2.1-susan-3.safetensors",
+        0.9,
+        "sd-loras/Detail-Tweaker-XL-v1.0.safetensors",
+        1.5,
+        "sd-loras/SDXL_Niji_V6_DLC_LoRa_V4.safetensors",
+        0.8,
+        "None",
+        1
+      ]
+    },
+    {
+      "id": 52,
+      "type": "SaveImage",
+      "pos": [
+        2226,
+        250
+      ],
+      "size": [
+        347.64075182946726,
+        657.6727540199569
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 33
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "susan/susan-text-2-image-test"
+      ]
+    }
+  ],
+  "links": [
+    [
+      25,
+      6,
+      0,
+      3,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      26,
+      7,
+      0,
+      3,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      27,
+      156,
+      0,
+      3,
+      3,
+      "LATENT"
+    ],
+    [
+      28,
+      17,
+      0,
+      6,
+      0,
+      "CLIP"
+    ],
+    [
+      29,
+      17,
+      0,
+      7,
+      0,
+      "CLIP"
+    ],
+    [
+      30,
+      3,
+      0,
+      8,
+      0,
+      "LATENT"
+    ],
+    [
+      31,
+      4,
+      2,
+      8,
+      1,
+      "VAE"
+    ],
+    [
+      32,
+      154,
+      1,
+      17,
+      0,
+      "CLIP"
+    ],
+    [
+      33,
+      8,
+      0,
+      52,
+      0,
+      "IMAGE"
+    ],
+    [
+      38,
+      8,
+      0,
+      151,
+      0,
+      "IMAGE"
+    ],
+    [
+      41,
+      7,
+      0,
+      151,
+      3,
+      "CONDITIONING"
+    ],
+    [
+      42,
+      4,
+      2,
+      151,
+      4,
+      "VAE"
+    ],
+    [
+      43,
+      152,
+      0,
+      151,
+      5,
+      "UPSCALE_MODEL"
+    ],
+    [
+      44,
+      151,
+      0,
+      153,
+      0,
+      "IMAGE"
+    ],
+    [
+      45,
+      4,
+      0,
+      154,
+      0,
+      "MODEL"
+    ],
+    [
+      46,
+      4,
+      1,
+      154,
+      1,
+      "CLIP"
+    ],
+    [
+      47,
+      154,
+      0,
+      3,
+      0,
+      "MODEL"
+    ],
+    [
+      48,
+      6,
+      0,
+      151,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      49,
+      154,
+      0,
+      151,
+      1,
+      "MODEL"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.7627768444385477,
+      "offset": [
+        -921.7816437345854,
+        70.80947425894747
+      ]
+    }
+  },
+  "version": 0.4
+}
