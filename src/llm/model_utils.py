@@ -83,8 +83,11 @@ def calculate_parameters2(config):
 
 def count_parameters(model, show_info=False):
     total = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total_bytes = 0
     for name,p in model.named_parameters():
         if p.requires_grad and show_info:
-            logging.info(f"{name}, {p.shape} {p.numel()}")
-        
+            logging.info(f"{name}, {p.device} {p.shape} {p.numel()}")
+            total_bytes += p.nbytes
+    
+    logging.info(f"{total_bytes} {total}")
     return total

@@ -23,7 +23,8 @@ model_7B = "/aigc-nas02/hf_models/Qwen2-7B" # 7615616512
 # transformers Loading model weights took 15.9772 GB
 
 os.environ["OMP_NUM_THREADS"] = "4"
-os.environ["CUDA_VISIBLE_DEVICES"] = "4,7"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "4,7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 
 @pytest.mark.parametrize("config_dir", models_to_test)
 def test_model_parameters(config_dir):
@@ -40,17 +41,32 @@ def test_model_parameters2(config_dir):
 
 def test_real_parameters(model_name=model_7B):
     from vllm.utils import CudaMemoryProfiler
+    # 有一些torch parameter 是meta类型
+    # with CudaMemoryProfiler() as m:
+    #     model = AutoModelForCausalLM.from_pretrained(
+    #         model_name,
+    #         torch_dtype="auto",
+    #         # device="cuda",
+    #     )
+    #     tokenizer = AutoTokenizer.from_pretrained(model_name)
+    #     logging.info(f"{type(model)}") # Qwen2ForCausalLM
+
     with CudaMemoryProfiler() as m:
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype="auto",
-            device_map="auto"
-        )
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    # model = AutoConfig.from_pretrained(model_name,)
+        from accelerate import infer_auto_device_map, init_empty_weights, load_checkpoint_and_dispatch
+
+        config = AutoConfig.from_pretrained(model_name)
+        with init_empty_weights():
+            model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.float16)
+
+        max_memory = {0: "74GiB", "cpu": "100GiB"}
+        device_map = infer_auto_device_map(model, max_memory=max_memory,)
+
+        model = load_checkpoint_and_dispatch(model, model_name, device_map=device_map,)
+        logging.info(f"{type(model)}") # Qwen2ForCausalLM
+
 
     xx = model_utils.count_parameters(model, show_info=True)
-    print(xx)
+    logging.info(xx)
     logging.info("transformers Loading model weights took %.4f GB", m.consumed_memory / float(2**30))
 
 
@@ -82,13 +98,16 @@ def safetensor_check(model_dir=""):
 
 
 def vllm_load_model():
-    # test_real_parameters(model_72B)
+    test_real_parameters(model_72B)
 
     from vllm import EngineArgs, LLMEngine, RequestOutput, SamplingParams
     engine_args = EngineArgs(model=model_72B, dtype=torch.float16,
-                             enable_prefix_caching=True, use_v2_block_manager=True,
-                             gpu_memory_utilization=0.92,  trust_remote_code=True,
-                             tensor_parallel_size=2,
+                             use_v2_block_manager=False,
+                             gpu_memory_utilization=0.92, trust_remote_code=True,
+                             enforce_eager=True,
+                             enable_prefix_caching=True, enable_chunked_prefill=True,
+                            #  worker_use_ray=True,
+                            #  tensor_parallel_size=2,
                              max_model_len=2048
                             )
     engine = LLMEngine.from_engine_args(engine_args)
