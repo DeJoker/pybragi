@@ -4,6 +4,8 @@
 import json
 import logging
 
+from safetensors import safe_open
+
 
 def read_config(configfile=""):
     with open(configfile, "r") as fp:
@@ -91,3 +93,10 @@ def count_parameters(model, show_info=False):
     
     logging.info(f"{total_bytes} {total}")
     return total
+
+def open_safetensor(model_file=""):
+    tensors = {}
+    with safe_open(model_file, framework="pt", device='cpu') as f:
+        for k in f.keys():
+            tensors[k] = f.get_tensor(k)
+    return tensors
