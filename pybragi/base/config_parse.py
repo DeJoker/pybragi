@@ -1,3 +1,4 @@
+import argparse
 import yaml
 from typing import Any
 
@@ -8,6 +9,12 @@ class AttrDict(dict):
 
     def __getattr__(self, key):
         return self[key]
+
+def dict_to_namespace(config_dict):
+    args = argparse.Namespace()
+    for key, value in config_dict.items():
+        setattr(args, key, value)
+    return args
 
 
 def recursive_convert(attr_dict):
