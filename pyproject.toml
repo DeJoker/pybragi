@@ -12,7 +12,7 @@ homepage = "https://github.com/DeJoker/pybragi"
 
 [project]
 name = "pybragi"
-version = "0.0.2"
+version = "0.0.3"
 description = "pybragi is server framework"
 authors = [
     {name = "DeJoker", email = "localjie@163.com"},
@@ -49,8 +49,8 @@ repository = "https://github.com/DeJoker/pybragi"
 
 
 [tool.setuptools.packages.find]
-where = ["pybragi"] 
-exclude = ["assets*", "benchmark*", "docs*", "dist*", "demo*", "tests*"]
+include = ["pybragi*"] 
+exclude = ["assets*", "benchmark*", "docs*", "dist*", "demo*", "tests*",]
 
 [project.optional-dependencies]
 base = ["fastapi",
