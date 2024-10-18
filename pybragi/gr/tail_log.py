@@ -58,7 +58,7 @@ class TailNLog():
     def load_logfile(self):
         self.stop_reading = True
         self.io = open(self.logfile, "rb")
-        self.current_pos = self.find_start_position(self.io, self.tail)
+        self.current_pos = max(self.find_start_position(self.io, self.tail), 0)
         self.stop_reading = False
 
 
