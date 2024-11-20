@@ -12,7 +12,7 @@ homepage = "https://github.com/DeJoker/pybragi"
 
 [project]
 name = "pybragi"
-version = "0.0.3"
+version = "0.0.4"
 description = "pybragi is server framework"
 authors = [
     {name = "DeJoker", email = "localjie@163.com"},
@@ -41,6 +41,7 @@ dependencies = [
     "pillow",
     "uvicorn",
     "nvidia-ml-py",
+    "GPUtil",
 ]
 
 [tool.poetry]

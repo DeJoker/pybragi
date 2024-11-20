@@ -89,6 +89,9 @@ def safetensor_check(model_dir=""):
             tensors[k] = f.get_tensor(k)
 
             zero_mask = tensors[k] <= 1e-7
+
+            torch.sum(tensors[k] <= 1e-7) == tensors[k].numel()
+
             logging.info(f"{k} {tensors[k].nbytes} {tensors[k].numel()} "
                         f"{zero_mask.sum()} {torch.nonzero(tensors[k]).size(0)}"
                     )

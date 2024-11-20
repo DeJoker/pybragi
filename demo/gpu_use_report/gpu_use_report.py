@@ -107,7 +107,7 @@ def report_all():
             current[gpu].MemoryP50 = memoryP50
         
         logging.info(f"{machine}")
-        dingmsg = f"## {machine} 资源使用情况 \n"
+        dingmsg = f"## {machine} 过去七天资源使用情况 \n"
         for _,stat in current.items():
             logging.info(f"{stat.pretty_print()}")
             dingmsg += f"> {stat.pretty_print()}  \n"
