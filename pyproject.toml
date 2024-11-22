@@ -9,10 +9,12 @@ build-backend = "setuptools.build_meta"
 
 [project.urls]
 homepage = "https://github.com/DeJoker/pybragi" 
+Repository = "https://github.com/DeJoker/pybragi"
+
 
 [project]
 name = "pybragi"
-version = "0.0.4"
+version = "0.0.5"
 description = "pybragi is server framework"
 authors = [
     {name = "DeJoker", email = "localjie@163.com"},

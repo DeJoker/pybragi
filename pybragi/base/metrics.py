@@ -151,7 +151,7 @@ class PrometheusMixIn(web.RequestHandler):
         super().write(chunk)
 
 
-class StreamMtrics(BaseModel):
+class StreamMetrics(BaseModel):
     # init var
     RequestId: str = ""
     FromKafkaTime: float = 0.0
