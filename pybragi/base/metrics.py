@@ -6,7 +6,7 @@ import prometheus_client as pc
 from tornado import web
 from tornado.concurrent import run_on_executor
 from concurrent.futures import ThreadPoolExecutor
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 # http://172.20.20.5:5302/metrics 参考test-chat-core服务
 
 
@@ -155,7 +155,7 @@ class StreamMetrics(BaseModel):
     # init var
     RequestId: str = ""
     FromKafkaTime: float = 0.0
-    ArrivalTime: float = 0.0
+    ArrivalTime: float = Field(default_factory=time.perf_counter)
 
     # temp inner var
     LastTokenTime: float = 0.0
@@ -190,6 +190,22 @@ class StreamMetrics(BaseModel):
 
     def format_log(self):
         logging.info(f"{self.TTFT:.3f} {self.TPOT:.3f} {self.OutputSpeed:.3f} {self.InferTotal:.3f} {self.DeltaStreaming:.3f} " \
-                     f"from_kafka_to_end: tokens:{self.TokenCount} request_id:{self.RequestId}")
+                    f"tokens:{self.TokenCount} request_id:{self.RequestId}")
+
+    def __str__(self):
+        str = f"{self.TTFT:.3f} {self.TPOT:.3f} {self.OutputSpeed:.3f} {self.InferTotal:.3f} {self.DeltaStreaming:.3f} " \
+                     f"tokens:{self.TokenCount} request_id:{self.RequestId}"
+        return str
 
 
+
+if __name__ == "__main__":
+    def test_metrics():
+        import random
+        met = StreamMetrics(RequestId="123")
+        for i in range(10):
+            time.sleep(random.randint(10, 40)*0.01)
+            met.output_token()
+        met.finish_infer()
+        print(f"{met}")
+    test_metrics()
