@@ -16,33 +16,34 @@ def system_memory_usage() -> Tuple[float, float]:
 def process_memory_usage() -> float:
     process = psutil.Process(os.getpid())
     memory_info = process.memory_info()
-    memory_mb = memory_info.rss / 1024 / 1024
+    memory_mb = memory_info.rss / (1024**2)
     return memory_mb
 
 def system_gpu_memory():
-    allocated = 0
-    cached = 0
-    total = None
+    # return bytes
+    allocated_bytes = 0
+    cached_bytes = 0
+    total_bytes = 0
 
     try:
         import GPUtil
         gpus = GPUtil.getGPUs()
         if gpus:
             gpu = gpus[0]
-            total = gpu.memoryTotal
-            allocated = gpu.memoryUsed
+            total_bytes = gpu.memoryTotal
+            allocated_bytes = gpu.memoryUsed
     except ImportError:
         pass
-    return allocated, cached, total
+    return allocated_bytes, cached_bytes, total_bytes
 
 def process_gpu_memory():
     if hasattr(torch, 'cuda') and torch.cuda.is_available():
-        allocated = torch.cuda.memory_allocated() / 1024 / 1024
-        cached = torch.cuda.memory_reserved() / 1024 / 1024
+        allocated = torch.cuda.memory_allocated() / (1024**2)
+        cached = torch.cuda.memory_reserved() / (1024**2)
     elif hasattr(torch, 'hip') and torch.hip.is_available():
         # ROCm PyTorch supports AMD GPU
-        allocated = torch.hip.memory_allocated() / 1024 / 1024  
-        cached = torch.hip.memory_reserved() / 1024 / 1024
+        allocated = torch.hip.memory_allocated() / (1024**2)  
+        cached = torch.hip.memory_reserved() / (1024**2)
     return allocated, cached
 
 
