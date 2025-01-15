@@ -3,8 +3,9 @@ import torch
 from diffusers import FluxPipeline
 from diffusers import DDPMScheduler, UNet2DModel
 
-from pybragi.src.base import log
-from pybragi.src.llm import model_utils
+from pybragi.base import log
+from pybragi.llm import model_utils
+
 
 # md5sum /data2/hf_models/FLUX.1-dev/flux1-dev.safetensors # a6bd8c16dfc23db6aee2f63a2eba78c0
 # md5sum /data2/rwy/wangxiang_ComfyUI/models/unet/flux1-dev.safetensors # a6bd8c16dfc23db6aee2f63a2eba78c0

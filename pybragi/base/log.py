@@ -9,8 +9,81 @@ from . import scribe_log
 format = "%(levelname)s %(asctime)s.%(msecs)03d [%(process)d-%(threadName)s] (%(funcName)s@%(filename)s:%(lineno)03d) %(message)s"
 datefmt = "%Y-%m-%d %H:%M:%S"
 
-logging.basicConfig(format=format, datefmt=datefmt, level=logging.INFO, handlers=[logging.StreamHandler()])
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(logging.Formatter(fmt=format, datefmt=datefmt))
+
+logging.basicConfig(format=format, datefmt=datefmt, level=logging.INFO, force=True, handlers=[logging.StreamHandler()])
+
 logging.info(f"init log")
+
+def use_loguru():
+    from loguru import logger
+    import sys
+    import logging
+
+    # Remove default logger
+    logger.remove()
+
+    # Add our custom formatter
+    logger.add(
+        sys.stderr,
+        format="<level>{level: <8}</level> {time:YYYY-MM-DD HH:mm:ss.SSS} [{process}-{thread.name}] ({function}@{file}:{line}) {message}",
+        level="INFO"
+    )
+
+    # Create class to intercept standard logging
+    class InterceptHandler(logging.Handler):
+        def emit(self, record):
+            # Get corresponding Loguru level if it exists
+            try:
+                level = logger.level(record.levelname).name
+            except ValueError:
+                level = record.levelno
+
+            # Find caller from where originated the logged message
+            frame, depth = logging.currentframe(), 2
+            while frame.f_code.co_filename == logging.__file__:
+                frame = frame.f_back
+                depth += 1
+
+            logger.opt(depth=depth, exception=record.exc_info).log(
+                level, record.getMessage()
+            )
+
+    def setup_logging():
+        # Remove existing handlers
+        logging.root.handlers = []
+        
+        # Add our interceptor
+        logging.root.addHandler(InterceptHandler())
+        
+        # Set minimum logging level
+        logging.root.setLevel(logging.INFO)
+
+    # Initial setup
+    setup_logging()
+
+
+def reset_logging():
+    if logging.root.handlers:
+        print(f"logging already init. reset all")
+        for handler in logging.root.handlers[:]:
+            print(f"{handler.name}")
+            logging.root.removeHandler(handler)
+            handler.close()
+            
+    for logger_name, logger in logging.Logger.manager.loggerDict.items():
+        if isinstance(logger, logging.Logger):
+            # Remove handlers from each logger
+            for handler in logger.handlers[:]:
+                logger.removeHandler(handler)
+            # Optionally, you can also set the level to NOTSET to reset the logger level
+            logger.setLevel(logging.NOTSET)
+
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(console_handler)
 
 
 def init_logger(service, file_enabled=False, scribe_category='', file_path='', tag=""):

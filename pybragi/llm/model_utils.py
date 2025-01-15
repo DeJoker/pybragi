@@ -3,8 +3,10 @@
 
 import json
 import logging
+from typing import OrderedDict
 
 from safetensors import safe_open
+import torch
 
 
 def read_config(configfile=""):
@@ -88,10 +90,24 @@ def count_parameters(model, show_info=False):
     total_bytes = 0
     for name,p in model.named_parameters():
         if p.requires_grad and show_info:
-            logging.info(f"{name}, {p.device} {p.shape} {p.numel()}")
+            print(f"{name}, {p.device} {p.shape} {p.numel()}")
+        total_bytes += p.nbytes
+    
+    logging.info(f"total_bytes:{total_bytes/1024**2:.2f}MB total:{total}")
+    return total
+
+def dicts_parameters(dicts: OrderedDict, show_info=False):
+    # print("metadata:", dicts.get("_metadata", {}))
+
+    total = sum(p.numel() if isinstance(p, torch.Tensor) else 0 for p in dicts.values())
+    total_bytes = 0
+    for name,p in dicts.items():
+        if isinstance(p, torch.Tensor):
+            if show_info:
+                print(f"{name}, {p.device} {p.shape} {p.numel()}")
             total_bytes += p.nbytes
     
-    logging.info(f"{total_bytes} {total}")
+    logging.info(f"total_bytes:{total_bytes/1024**2:.2f}MB total:{total}")
     return total
 
 def open_safetensor(model_file=""):
