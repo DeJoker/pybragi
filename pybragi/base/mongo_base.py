@@ -5,7 +5,6 @@ import traceback
 from datetime import datetime
 from typing import Any, Dict
 
-from service.base import metrics
 from pymongo.database import Database, Collection
 from pymongo import errors, MongoClient, ASCENDING
 

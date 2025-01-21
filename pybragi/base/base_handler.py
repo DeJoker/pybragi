@@ -6,8 +6,7 @@ from tornado.concurrent import run_on_executor
 
 import json
 from datetime import datetime
-# from . import metrics
-import metrics
+from pybragi.base import metrics
 
 
 class Echo(metrics.PrometheusMixIn):
