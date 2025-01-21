@@ -33,14 +33,11 @@ dependencies = [
     "psutil>=5.9.1",
     "tornado>=6.0.2",
     "pymongo>=3.4.0",
-    "ujson>=1.35",
     "kafka-python>=2.0.2",
     "requests>=2.22.0",
     "prometheus_client>=0.14.1",
     "facebook-scribe==2.0.post1",
-    "opencv-python>=4.4.0",
     "numpy",
-    "pillow",
     "uvicorn",
     "nvidia-ml-py",
     "GPUtil",
@@ -50,17 +47,12 @@ dependencies = [
 repository = "https://github.com/DeJoker/pybragi"
 
 
-
 [tool.setuptools.packages.find]
 include = ["pybragi*"] 
 exclude = ["assets*", "benchmark*", "docs*", "dist*", "demo*", "tests*",]
 
 [project.optional-dependencies]
-base = ["fastapi",
-       ]
-openai = ["openai>=1.0", "tiktoken"]
-anthropic = ["anthropic>=0.20.0"]
-litellm = ["litellm>=1.0.0"]
-test = ["jsonlines", "matplotlib", "pandas"]
-all = ["pybragi[srt]", "pybragi[openai]", "pybragi[anthropic]", "pybragi[litellm]"]
+image = ["opencv-python>=4.4.0", "pillow"]
+test = ["jsonlines", "matplotlib", "ujson>=1.35"]
+all = ["pybragi[image]"]
 dev = ["pybragi[all]", "pybragi[test]"]

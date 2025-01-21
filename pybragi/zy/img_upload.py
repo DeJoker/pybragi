@@ -1,6 +1,5 @@
 import aiohttp, asyncio
 import numpy as np
-import cv2
 import os, io, json
 import logging
 from PIL import Image
