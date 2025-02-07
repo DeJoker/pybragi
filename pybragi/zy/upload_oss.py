@@ -5,8 +5,13 @@ from io import BytesIO
 from datetime import datetime
 from pathlib import Path
 import oss2
+import requests
 
 from pybragi.base import time_utils
+
+internal_endpoint = "oss-cn-shanghai-internal.aliyuncs.com"
+endpoint = "oss-cn-shanghai.aliyuncs.com"
+bucket_name = "shencha-model-platform"
 
 def upload_wanxiang(file_path, filename=''):
     if not filename:
@@ -15,7 +20,7 @@ def upload_wanxiang(file_path, filename=''):
     logging.info(f'upload {file_path} to {filename}')
 
     auth = oss2.Auth(os.getenv("model_platform_ak", ""), os.getenv("model_platform_as", ""))
-    bucket = oss2.Bucket(auth, 'oss-cn-shanghai.aliyuncs.com', 'shencha-model-platform')
+    bucket = oss2.Bucket(auth, internal_endpoint, bucket_name)
 
     oss_path = 'aigc/wanxiang/'+filename
     exist = bucket.object_exists(oss_path)
@@ -32,7 +37,7 @@ def upload_wanxiang(file_path, filename=''):
 @time_utils.elapsed_time_limit(0.05)
 def upload_rvc(bytes: BytesIO, request_id: str):
     auth = oss2.Auth(os.getenv("model_platform_ak", ""), os.getenv("model_platform_as", ""))
-    bucket = oss2.Bucket(auth, 'oss-cn-shanghai.aliyuncs.com', 'shencha-model-platform')
+    bucket = oss2.Bucket(auth, internal_endpoint, bucket_name)
 
     oss_path = f'aigc/rvc/{request_id}.wav'
     resp = bucket.put_object(oss_path, bytes)
@@ -40,3 +45,11 @@ def upload_rvc(bytes: BytesIO, request_id: str):
     resp_info = ", ".join("%s: %s" % item for item in vars(resp).items())
     logging.info(f'{resp_info}')
     return "https://shencha-model-platform.oss-cn-shanghai.aliyuncs.com/" + oss_path, resp.status == 200
+
+
+
+if __name__ == '__main__':
+    res = requests.get("http://zyvideo101.oss-cn-shanghai.aliyuncs.com/zyad/4e/33/1ce5-cd9e-11ef-bdec-00163e023ce8")
+    res = upload_rvc(BytesIO(res.content), 'c')
+    print(res)
+

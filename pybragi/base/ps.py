@@ -8,6 +8,8 @@ import torch
 import os, gc
 import contextlib
 from typing import Dict
+import netifaces
+
 
 def log_gpu_memory(tag=""):
     if torch.cuda.is_available():
@@ -189,6 +191,14 @@ def get_disk_usage(path: Union[str, Path]) -> Tuple[float, float, float]:
     except OSError as e:
         raise OSError(f"无法获取路径 {path} 的磁盘使用情况: {e}")
 
+def get_ipv4(card_name: str = "eth0"):
+    try:
+        addrs = netifaces.ifaddresses(card_name)
+        if netifaces.AF_INET in addrs:
+            return addrs[netifaces.AF_INET][0]['addr']
+        return "127.0.0.1"  # fallback to localhost if no IPv4 found
+    except ValueError:  # eth0 not found
+        return "127.0.0.1"
 
 if __name__ == "__main__":
     print(system_memory_usage())

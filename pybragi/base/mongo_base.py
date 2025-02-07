@@ -40,7 +40,6 @@ def insert_item(table, data: dict):
         logging.error(traceback.format_exc())
         return False
 
-
 def insert_items(table, data: list):
     try:
         result = get_db()[table].insert_many(data)
@@ -55,9 +54,9 @@ def insert_items(table, data: list):
         pass
 
 
-def update_item(table, condition, update):
+def update_item(table, condition, update, upsert=False):
     collection: Collection = get_db()[table]
-    result = collection.update_many(condition, update)
+    result = collection.update_many(condition, update, upsert=upsert)
     return result
 
 
@@ -78,11 +77,16 @@ def aggregate(table, pipeline: list[Dict[str, Any]]):
 
 
 def get_item(table, condition):
-    collection = get_db()[table]
+    collection: Collection = get_db()[table]
 
     item = collection.find_one(condition)
     return item
 
+def get_items(table, condition):
+    collection: Collection = get_db()[table]
+
+    items = collection.find(condition)
+    return list(items)
 
 def count(table, condition):
     collection = get_db()[table]
