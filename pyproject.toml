@@ -14,7 +14,7 @@ Repository = "https://github.com/DeJoker/pybragi"
 
 [project]
 name = "pybragi"
-version = "0.0.6"
+version = "0.0.7"
 description = "pybragi is server framework"
 authors = [
     {name = "DeJoker", email = "localjie@163.com"},
@@ -41,7 +41,6 @@ dependencies = [
     "numpy",
     "uvicorn",
     "nvidia-ml-py",
-    "GPUtil",
 ]
 
 [tool.poetry]
