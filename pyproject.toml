@@ -53,6 +53,7 @@ exclude = ["assets*", "benchmark*", "docs*", "dist*", "demo*", "tests*",]
 
 [project.optional-dependencies]
 image = ["opencv-python>=4.4.0", "pillow"]
+zy = ["tos>=2.8.1", "volcengine>=1.0.174"]
 test = ["jsonlines", "matplotlib", "ujson>=1.35"]
-all = ["pybragi[image]"]
+all = ["pybragi[image]", "pybragi[zy]"]
 dev = ["pybragi[all]", "pybragi[test]"]
