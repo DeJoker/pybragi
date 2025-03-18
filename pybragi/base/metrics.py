@@ -10,75 +10,82 @@ from pydantic import BaseModel, Field
 # http://172.20.20.5:5302/metrics 参考test-chat-core服务
 
 
-class MetricsManager:
-    def __init__(self, name: str):
-        latency_buckets = (
-            [i * 100 for i in range(1, 10)]
-            + [i * 1000 for i in range(1, 11)]
-            + [i * 2000 for i in range(6, 16)]
-        )
-        big_latency_buckets = (
-            latency_buckets + 
-            [i * 3000 for i in range(11, 20)]
-        )
 
-        server_labels = ["service", "uri"]
+class MetricsManager:
+    latency_buckets = (
+        [round(0.1*i, 3) for i in range(10)] +
+        [i for i in range(1, 11)]
+    )
+    big_latency_buckets = (
+        latency_buckets + 
+        [2*i for i in range(6, 16)] +
+        [3*i for i in range(11, 20)]
+    )
+
+    speed_buects = (
+        [3*i for i in range(30)]
+    )
+
+    service_label = ["service"]
+    server_labels = [*service_label, "uri"]
+    task_queue_labels = [*service_label, "queue_type"] # ['priority', 'normal', 'batch',]
+    speed_labels = [ "backend", ]  # ['vllm', 'sglang', 'transformer',]
+
+    def __init__(self, name: str):
         self.server_name = name
-        self.request_qps = pc.Counter("metrics_httpsrv_qps", "http接口请求量", server_labels)
+        self.request_qps = pc.Counter("metrics_httpsrv_qps", "http接口请求量", MetricsManager.server_labels)
         self.request_value = pc.Gauge(
-            "metrics_httpsrv_latency_gauge", "http接口瞬时请求时延", server_labels
+            "metrics_httpsrv_latency_gauge", "http接口瞬时请求时延", MetricsManager.server_labels
         )
         self.request_histogram = pc.Histogram(
             "metrics_httpsrv_latency_histogram",
             "http接口请求时延",
-            server_labels,
-            buckets=latency_buckets,
+            MetricsManager.server_labels,
+            buckets=MetricsManager.latency_buckets,
         )
 
-        task_queue_labels = [
-            "service",
-            "queue_type",
-        ]  # ['priority', 'normal', 'batch',]
         self.task_queue_length = pc.Gauge(
-            "metrics_task_queue_length", "任务队列长度", task_queue_labels
+            "metrics_task_queue_length", "任务队列长度", MetricsManager.task_queue_labels
         )
-
-        service_label = ["service"]
 
         self.caller_histogram = pc.Histogram(
             "caller_request_latency_histogram",
             "请求外部接口时延",
-            [*service_label, "url"],
-            buckets=latency_buckets,
+            [*MetricsManager.service_label, "url"],
+            buckets=MetricsManager.latency_buckets,
         )
 
         self.task_latency_histogram = pc.Histogram(
             "metrics_task_latency_histogram",
             "任务处理时延",
-            [*service_label, "task"],
-            buckets=latency_buckets,
+            [*MetricsManager.service_label, "task"],
+            buckets=MetricsManager.latency_buckets,
         )
 
         task_total_buckets = [i for i in range(30)]
-        self.total_request_ms = pc.Histogram(
+        self.total_request_lantency = pc.Histogram(
             "metrics_request_sec_histogram",
             "请求整体处理时间",
-            service_label,
+            MetricsManager.service_label,
             buckets=task_total_buckets,
         )
 
-        batch_buckets = [1] + [i * 2 for i in range(1, 20)]
+        batch_buckets = [1] + [i * 4 for i in range(1, 26)]
         self.batch_process = pc.Histogram(
-            "metrics_batch_process", "批处理数量", service_label, buckets=[1, 2, 4, 6, 8]
+            "metrics_batch_process", "批处理数量", MetricsManager.service_label, buckets=[1, 2, 4, 6, 8]
         )
 
-        speed_labels = [
-            "service",
-            "backend",
-        ]  # ['vllm-LLM', 'gptq', 'AutoModelForCausalLM',]
-        self.token_speed = pc.Gauge(
-            "metrics_infer_speed", "infer speed token/s", speed_labels
+        self.token_speed = pc.Histogram(
+            "metrics_infer_speed", "infer speed token/s", MetricsManager.speed_labels, buckets=MetricsManager.speed_buects
         )
+        self.ttft_latency = pc.Histogram(
+            "metrics_ttft_latency", "ttft latency", MetricsManager.speed_labels, buckets=MetricsManager.latency_buckets
+        )
+        self.tpot_latency = pc.Histogram(
+            "metrics_tpot_latency", "tpot latency", MetricsManager.speed_labels, buckets=MetricsManager.latency_buckets
+        )
+        
+
 
         kafka_labels = [
             "topic",
@@ -90,20 +97,18 @@ class MetricsManager:
         self.kafka_consume_batch = pc.Histogram(
             "kafka_batch", "batch", ["topic"], buckets=batch_buckets
         )
-        self.batch_process_latency = pc.Histogram("batch_process_latency", "批任务-处理时延", ["topic"], buckets=big_latency_buckets)
-        self.pretask_latency = pc.Histogram("pretask_latency", "单任务-时延", ["topic"], buckets=latency_buckets)
+        self.batch_process_latency = pc.Histogram("batch_process_latency", "批任务-处理时延", ["topic"], buckets=MetricsManager.big_latency_buckets)
+        self.pretask_latency = pc.Histogram("pretask_latency", "单任务-时延", ["topic"], buckets=MetricsManager.big_latency_buckets)
 
-        self.task_get_latency = pc.Histogram("task_total_latency", "获取任务-时延", ["topic"], buckets=big_latency_buckets)
+        self.task_poll_latency = pc.Histogram("task_poll_latency", "kafka拉取", ["topic"], buckets=MetricsManager.big_latency_buckets)
+        self.task_get_latency = pc.Histogram("task_total_latency", "获取任务-时延", ["topic"], buckets=MetricsManager.big_latency_buckets)
         self.triton_down = pc.Gauge("triton_down", "triton服务down", ["endpoint"])
-        # self.task_total_latency = pc.Gauge("task_total_latency", "整体时延", ["topic"])
-        self.remote_down = pc.Gauge("remote_down", "远端服务down", [*service_label, "endpoint"])
+
+        self.remote_down = pc.Gauge("remote_down", "远端服务down", [*MetricsManager.service_label, "endpoint"])
 
         self.except_cnt = pc.Counter("except_cnt", "异常数量", ["type", "except"])
         self.drop_cnt = pc.Counter("drop_cnt", "丢弃请求数量", ["topic"])
 
-
-
-        
 
 
 metrics_manager: MetricsManager
@@ -209,3 +214,5 @@ if __name__ == "__main__":
         met.finish_infer()
         print(f"{met}")
     test_metrics()
+
+
