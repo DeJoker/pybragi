@@ -10,18 +10,12 @@ from pymongo import errors, MongoClient, ASCENDING
 
 
 class MongoOnline(object):
-    db = "llm"
-    table = "llm_deploy"
-    url = "mongodb://platform:oc5waiw4paid8Bu@127.0.0.1:27017"
-    max_pool_size = 4
-    mongoStore: MongoClient
     mongoDB: Database
 
 
-def new_store(url=MongoOnline.url, database=MongoOnline.db, max_pool_size=MongoOnline.max_pool_size):
+def new_store(url: str, database: str, max_pool_size: int):
     mongoStore = MongoClient(url, maxPoolSize=max_pool_size)
     mongoDB = mongoStore[database]
-    MongoOnline.mongoStore = mongoStore
     MongoOnline.mongoDB = mongoDB
 
 
