@@ -143,11 +143,13 @@ class PrometheusMixIn(web.RequestHandler):
         request_time = self.request.request_time()
         status = self.get_status()
 
-        get_metrics_manager().request_histogram.labels(
-            metrics_manager.server_name, path
+        mgr = get_metrics_manager()
+
+        mgr.request_histogram.labels(
+            mgr.server_name, path
         ).observe(request_time)
-        get_metrics_manager().request_qps.labels(
-            metrics_manager.server_name, path
+        mgr.request_qps.labels(
+            mgr.server_name, path
         ).inc()
     
     def write(self, chunk):

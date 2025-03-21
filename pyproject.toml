@@ -14,17 +14,17 @@ Repository = "https://github.com/DeJoker/pybragi"
 
 [project]
 name = "pybragi"
-version = "0.0.7"
+version = "0.0.8"
 description = "pybragi is server framework"
 authors = [
     {name = "DeJoker", email = "localjie@163.com"},
 ]
 readme = "README.md"
 requires-python = ">=3.8"
-license = {file = "LICENSE.txt"}
+license = "Apache-2.0"
+license-files = ["LICENSE.txt"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
     "facebook-scribe==2.0.post1",
@@ -37,7 +37,6 @@ dependencies = [
     "kafka-python>=2.0.2",
     "requests>=2.22.0",
     "prometheus_client>=0.14.1",
-    "facebook-scribe==2.0.post1",
     "numpy",
     "uvicorn",
     "nvidia-ml-py",
