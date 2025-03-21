@@ -13,17 +13,17 @@ from pydantic import BaseModel, Field
 
 class MetricsManager:
     latency_buckets = (
-        [round(0.1*i, 3) for i in range(10)] +
-        [i for i in range(1, 11)]
+        [round(0.025*i, 3) for i in range(40)] +
+        [round(0.1*i, 3) for i in range(10, 51)]
     )
     big_latency_buckets = (
         latency_buckets + 
-        [2*i for i in range(6, 16)] +
+        [2*i for i in range(3, 16)] +
         [3*i for i in range(11, 20)]
     )
 
     speed_buects = (
-        [3*i for i in range(30)]
+        [3*i for i in range(50)]
     )
 
     service_label = ["service"]
@@ -215,6 +215,12 @@ if __name__ == "__main__":
             met.output_token()
         met.finish_infer()
         print(f"{met}")
-    test_metrics()
+    # test_metrics()
+    print(MetricsManager.latency_buckets)
+    print(MetricsManager.big_latency_buckets)
+    test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=MetricsManager.big_latency_buckets)
+    # test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=[0,1,1.1,1]) # Buckets not in sorted order
+    test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=[0,1,1]) # Duplicated timeseries in CollectorRegistry
+    print("end")
 
 
