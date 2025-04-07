@@ -109,6 +109,10 @@ class MetricsManager:
         self.except_cnt = pc.Counter("except_cnt", "异常数量", ["type", "except"])
         self.drop_cnt = pc.Counter("drop_cnt", "丢弃请求数量", ["topic"])
 
+        self.status = pc.Gauge(
+            "status", "状态值", ["type"]
+        )
+
 
 
 metrics_manager: MetricsManager

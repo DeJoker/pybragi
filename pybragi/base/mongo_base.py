@@ -34,18 +34,17 @@ def insert_item(table, data: dict):
         logging.error(traceback.format_exc())
         return False
 
+
 def insert_items(table, data: list):
     try:
         result = get_db()[table].insert_many(data)
         logging.info(f"insert: {result}")
         return True
-    except errors.DuplicateKeyError:
+    except errors.DuplicateKeyError as e:
         return False
     except Exception as e:
         logging.error(traceback.format_exc())
         return False
-    finally:
-        pass
 
 
 def update_item(table, condition, update, upsert=False):
@@ -54,10 +53,10 @@ def update_item(table, condition, update, upsert=False):
     return result
 
 
-def query_batch_items(table, conditions, sort=[("_id", ASCENDING)], limit=0):
+def query_batch_items(table, conditions, sort=[("_id", ASCENDING)], skip=0, limit=0):
     collection: Collection = get_db()[table]
 
-    cursor = collection.find(conditions, sort=sort, limit=limit)
+    cursor = collection.find(conditions, skip=skip, sort=sort, limit=limit)
     return list(cursor)
 
 def aggregate(table, pipeline: list[Dict[str, Any]]):

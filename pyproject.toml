@@ -14,7 +14,7 @@ Repository = "https://github.com/DeJoker/pybragi"
 
 [project]
 name = "pybragi"
-version = "0.0.9"
+version = "0.0.10"
 description = "pybragi is server framework"
 authors = [
     {name = "DeJoker", email = "localjie@163.com"},
@@ -30,7 +30,7 @@ dependencies = [
     "facebook-scribe==2.0.post1",
     "thrift",
     "pydantic",
-    "netifaces",
+    "ifaddr",
     "psutil>=5.9.1",
     "tornado>=6.0.2",
     "pymongo>=3.4.0",

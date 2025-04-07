@@ -293,16 +293,18 @@ def get_disk_usage(path: Union[str, Path]) -> Tuple[float, float, float]:
         raise OSError(f"无法获取路径 {path} 的磁盘使用情况: {e}")
 
 def get_ipv4(card_name: str = "eth0"):
-    import netifaces
-    try:
-        addrs = netifaces.ifaddresses(card_name)
-        if netifaces.AF_INET in addrs:
-            return addrs[netifaces.AF_INET][0]['addr']
-        return "127.0.0.1"  # fallback to localhost if no IPv4 found
-    except ValueError:  # eth0 not found
-        return "127.0.0.1"
+    import ifaddr
+    
+    adapters = ifaddr.get_adapters()
+    for adapter in adapters:
+        if adapter.name == card_name:
+            for ip in adapter.ips:
+                if ip.is_IPv4: # ip: ifaddr.IP
+                    return ip.ip
+    return "127.0.0.1"
 
 if __name__ == "__main__":
+    print(get_ipv4())
     print(system_memory_usage())
     print(process_memory_usage())
 
