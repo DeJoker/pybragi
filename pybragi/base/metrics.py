@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
+import json
 import logging
 import time
 import prometheus_client as pc
@@ -27,16 +28,13 @@ class MetricsManager:
     )
 
     service_label = ["service"]
-    server_labels = [*service_label, "uri"]
+    server_labels = [*service_label, "uri", "status"]
     task_queue_labels = [*service_label, "queue_type"] # ['priority', 'normal', 'batch',]
     speed_labels = [ "backend", ]  # ['vllm', 'sglang', 'transformer',]
 
     def __init__(self, name: str):
         self.server_name = name
         self.request_qps = pc.Counter("metrics_httpsrv_qps", "http接口请求量", MetricsManager.server_labels)
-        self.request_value = pc.Gauge(
-            "metrics_httpsrv_latency_gauge", "http接口瞬时请求时延", MetricsManager.server_labels
-        )
         self.request_histogram = pc.Histogram(
             "metrics_httpsrv_latency_histogram",
             "http接口请求时延",
@@ -141,6 +139,20 @@ class MetricsHandler(web.RequestHandler):
 
 pass_path = ["/healthcheck", "/metrics"]
 class PrometheusMixIn(web.RequestHandler):
+    def prepare(self):
+        if self.request.method != "POST":
+            return
+        
+        if len(self.request.body) < 500:
+            logging.info(f"{self.request.path} body: {self.request.body}")
+        elif self.request.headers.get('Content-Type') == "application/json":
+            body = json.loads(self.request.body)
+            try:
+                print_kv = {k: v for k, v in body.items() if len(str(v)) < 200}
+                logging.info(f"{self.request.path} part body: {print_kv}")
+            except Exception as e:
+                pass
+
     def on_finish(self):
         path = self.request.path
         method = self.request.method
@@ -150,15 +162,17 @@ class PrometheusMixIn(web.RequestHandler):
         mgr = get_metrics_manager()
 
         mgr.request_histogram.labels(
-            mgr.server_name, path
+            mgr.server_name, path, status
         ).observe(request_time)
         mgr.request_qps.labels(
-            mgr.server_name, path
+            mgr.server_name, path, status
         ).inc()
     
     def write(self, chunk):
         if self.request.path not in pass_path:
-            logging.info(f"{chunk}")
+            if isinstance(chunk, dict):
+                print_kv = {k: v for k, v in chunk.items() if len(str(v)) < 200}
+                logging.info(f"{self.request.path} part response: {print_kv}")
         super().write(chunk)
 
 

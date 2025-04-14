@@ -11,11 +11,11 @@ from pybragi.base import metrics
 
 class Echo(metrics.PrometheusMixIn):
     def post(self):
-        logging.info(f"{self.request.body.decode('unicode_escape')}")
+        # logging.info(f"{self.request.body.decode('unicode_escape')}")
         return self.write(self.request.body)
     
     def get(self):
-        logging.info(f"{str(self.request)}")
+        # logging.info(f"{str(self.request)}")
         return self.write(str(self.request.arguments))
 
 
