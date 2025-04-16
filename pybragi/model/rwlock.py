@@ -99,16 +99,20 @@ if __name__ == "__main__":
                 model_info["size"] += 1
     
     def infer(model_name: str):
+        future = None
         with get_model_for_read(model_name, test_models_dict, uuid=datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")) as model, time_utils.ElapseCtx(f"infer1 {model_name}", gt=0.01):
             logging.info(model)
 
             if model["size"] <= 0:
-                load_model(model_name)
+                future = executor.submit(load_model, model_name) # wait
             elif model["size"] < 3:
-                executor.submit(load_model, model_name)
+                executor.submit(load_model, model_name) # no wait
             else:
                 logging.info(f"enough, model {model_name} size: {model['size']}")
         
+        if future:
+            future.result() # wait outside of lock
+
         with get_model_for_read(model_name, test_models_dict, uuid=datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")) as model, time_utils.ElapseCtx(f"infer2 {model_name}", gt=0.01):
             logging.info(model)
         time.sleep(2.3)

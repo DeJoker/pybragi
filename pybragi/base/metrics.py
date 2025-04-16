@@ -7,9 +7,6 @@ import prometheus_client as pc
 from tornado import web
 from tornado.concurrent import run_on_executor
 from concurrent.futures import ThreadPoolExecutor
-from pydantic import BaseModel, Field
-# http://172.20.20.5:5302/metrics 参考test-chat-core服务
-
 
 
 class MetricsManager:
@@ -32,14 +29,19 @@ class MetricsManager:
     task_queue_labels = [*service_label, "queue_type"] # ['priority', 'normal', 'batch',]
     speed_labels = [ "backend", ]  # ['vllm', 'sglang', 'transformer',]
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, big_latency=False, kafka=False):
+        if big_latency:
+            latency_buckets = MetricsManager.big_latency_buckets
+        else:
+            latency_buckets = MetricsManager.latency_buckets
+        
         self.server_name = name
         self.request_qps = pc.Counter("metrics_httpsrv_qps", "http接口请求量", MetricsManager.server_labels)
         self.request_histogram = pc.Histogram(
             "metrics_httpsrv_latency_histogram",
             "http接口请求时延",
             MetricsManager.server_labels,
-            buckets=MetricsManager.latency_buckets,
+            buckets=latency_buckets,
         )
 
         self.task_queue_length = pc.Gauge(
@@ -50,14 +52,14 @@ class MetricsManager:
             "caller_request_latency_histogram",
             "请求外部接口时延",
             [*MetricsManager.service_label, "url"],
-            buckets=MetricsManager.latency_buckets,
+            buckets=latency_buckets,
         )
 
         self.task_latency_histogram = pc.Histogram(
             "metrics_task_latency_histogram",
             "任务处理时延",
             [*MetricsManager.service_label, "task"],
-            buckets=MetricsManager.latency_buckets,
+            buckets=latency_buckets,
         )
 
         task_total_buckets = [i for i in range(30)]
@@ -68,9 +70,8 @@ class MetricsManager:
             buckets=task_total_buckets,
         )
 
-        batch_buckets = [1] + [i * 4 for i in range(1, 26)]
         self.batch_process = pc.Histogram(
-            "metrics_batch_process", "批处理数量", MetricsManager.service_label, buckets=[1, 2, 4, 6, 8]
+            "metrics_batch_process", "批处理数量", MetricsManager.task_queue_labels, buckets=[1, 2, 4, 6, 8]
         )
 
         self.token_speed = pc.Histogram(
@@ -84,24 +85,25 @@ class MetricsManager:
         )
         
 
+        if kafka:
+            kafka_labels = [
+                "topic",
+                "partition",
+            ]
+            self.kafka_lag = pc.Gauge(
+                "kafka_lag", "lag", kafka_labels
+            )
 
-        kafka_labels = [
-            "topic",
-            "partition",
-        ]
-        self.kafka_lag = pc.Gauge(
-            "kafka_lag", "lag", kafka_labels
-        )
-        self.kafka_consume_batch = pc.Histogram(
-            "kafka_batch", "batch", ["topic"], buckets=batch_buckets
-        )
-        self.batch_process_latency = pc.Histogram("batch_process_latency", "批任务-处理时延", ["topic"], buckets=MetricsManager.big_latency_buckets)
-        self.pretask_latency = pc.Histogram("pretask_latency", "单任务-时延", ["topic"], buckets=MetricsManager.big_latency_buckets)
+            batch_buckets = [1] + [i * 4 for i in range(1, 26)]
+            self.kafka_consume_batch = pc.Histogram(
+                "kafka_batch", "batch", ["topic"], buckets=batch_buckets
+            )
 
-        self.task_poll_latency = pc.Histogram("task_poll_latency", "kafka拉取", ["topic"], buckets=MetricsManager.big_latency_buckets)
-        self.task_get_latency = pc.Histogram("task_total_latency", "获取任务-时延", ["topic"], buckets=MetricsManager.big_latency_buckets)
+            self.batch_process_latency = pc.Histogram("batch_process_latency", "批任务-处理时延", ["topic"], buckets=latency_buckets)
+
+            self.task_get_latency = pc.Histogram("task_total_latency", "获取任务-时延", ["topic"], buckets=latency_buckets)
+
         self.triton_down = pc.Gauge("triton_down", "triton服务down", ["endpoint"])
-
         self.remote_down = pc.Gauge("remote_down", "远端服务down", [*MetricsManager.service_label, "endpoint"])
 
         self.except_cnt = pc.Counter("except_cnt", "异常数量", ["type", "except"])
@@ -121,9 +123,9 @@ def get_metrics_manager():
     return metrics_manager
 
 
-def register_metrics(name: str):
+def register_metrics(name: str, big_latency=False, kafka=False):
     global metrics_manager
-    metrics_manager = MetricsManager(name)
+    metrics_manager = MetricsManager(name, big_latency, kafka)
 
 
 class MetricsHandler(web.RequestHandler):
@@ -176,50 +178,58 @@ class PrometheusMixIn(web.RequestHandler):
         super().write(chunk)
 
 
-class StreamMetrics(BaseModel):
-    # init var
-    RequestId: str = ""
-    FromKafkaTime: float = 0.0
-    ArrivalTime: float = Field(default_factory=time.perf_counter)
+class StreamMetrics:
+    def __init__(self, request_id, timestamp2, prompt_len) -> None:
+        self.request_id = request_id
+        self.timestamp2 = timestamp2
+        self.prompt_len = prompt_len
 
-    # temp inner var
-    LastTokenTime: float = 0.0
-    TokenCount: int = 0
-
-    # performance metrics var
-    TTFT: float = 0.0
-    TPOT: float = 0.0
-    OutputSpeed: float = 0.0
-    InferTotal: float = 0.0
-    DeltaStreaming: float = 0.0
+        self.start = time.time()
+        self.start_perf = time.perf_counter()
+        self.last_token_time = 0
+        self.max_token_delta = 0
+        self.output_token_count = 0
 
     def output_token(self):
         current = time.perf_counter()
         
-        if self.TokenCount == 0:
-           self.TTFT = current - self.ArrivalTime
+        if self.output_token_count == 0:
+           self.ttft = current - self.start_perf
         else:
-            self.TPOT = max(self.TPOT, current-self.LastTokenTime)
-        self.TokenCount += 1
-        self.LastTokenTime = current
+            self.max_token_delta = max(self.max_token_delta, current-self.last_token_time)
+        self.output_token_count += 1
+        self.last_token_time = current
         return
     
     def finish_infer(self, token_len=0):
         current = time.perf_counter()
         if token_len:
-            self.TokenCount = token_len
+            self.output_token_count = token_len
             
-        self.OutputSpeed = self.TokenCount/(current-self.ArrivalTime)
-        self.InferTotal = current-self.ArrivalTime
-        self.DeltaStreaming = self.InferTotal-self.TTFT
+        self.output_speed = self.output_token_count/(current-self.start_perf)
+        self.infer_total = current-self.start_perf
+        self.delta_streaming = self.infer_total-self.ttft
 
-    def format_log(self):
-        logging.info(f"{self.TTFT:.3f} {self.TPOT:.3f} {self.OutputSpeed:.3f} {self.InferTotal:.3f} {self.DeltaStreaming:.3f} " \
-                    f"tokens:{self.TokenCount} request_id:{self.RequestId}")
+    def dict(self):
+        return {
+            "request_id": self.request_id,
+            "prompt_len": self.prompt_len,
+            "output_token_count": self.output_token_count,
+            "produce_at": self.timestamp2,
+            "infer_start_delta": self.start-self.timestamp2,
+            "ttft": self.ttft,
+            "tpot": self.max_token_delta,
+            "speed": self.output_speed,
+            "infer_total": self.infer_total,
+            "delta_streaming": self.delta_streaming,
+            "from_request_total": time.time()-self.timestamp2,
+        }
 
     def __str__(self):
-        str = f"{self.TTFT:.3f} {self.TPOT:.3f} {self.OutputSpeed:.3f} {self.InferTotal:.3f} {self.DeltaStreaming:.3f} " \
-                     f"tokens:{self.TokenCount} request_id:{self.RequestId}"
+        str = f"request_id={self.request_id} prompt_len:{self.prompt_len} output_token_count:{self.output_token_count} produce_at:{self.timestamp2:.3f} " \
+            f"infer_start_delta:{self.start-self.timestamp2:.3f} " \
+            f"ttft:{self.ttft:.3f} tpot:{self.max_token_delta:.3f} speed:{self.output_speed:.3f} token/s " \
+            f"infer_total:{self.infer_total:.3f} delta_streaming:{self.delta_streaming:.3f} from_request_total:{time.time()-self.timestamp2:.3f}"
         return str
 
 
@@ -227,18 +237,20 @@ class StreamMetrics(BaseModel):
 if __name__ == "__main__":
     def test_metrics():
         import random
-        met = StreamMetrics(RequestId="123")
-        for i in range(10):
-            time.sleep(random.randint(10, 40)*0.01)
+        met = StreamMetrics(request_id="123", timestamp2=time.time(), prompt_len=100)
+        for _ in range(10):
+            time.sleep(random.randint(1, 50)*0.001)
             met.output_token()
         met.finish_infer()
         print(f"{met}")
-    # test_metrics()
-    print(MetricsManager.latency_buckets)
-    print(MetricsManager.big_latency_buckets)
-    test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=MetricsManager.big_latency_buckets)
+
+    test_metrics()
+
+    # print(MetricsManager.latency_buckets)
+    # print(MetricsManager.big_latency_buckets)
+    # test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=MetricsManager.big_latency_buckets)
     # test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=[0,1,1.1,1]) # Buckets not in sorted order
-    test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=[0,1,1]) # Duplicated timeseries in CollectorRegistry
+    # test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=[0,1,1]) # Duplicated timeseries in CollectorRegistry
     print("end")
 
 
