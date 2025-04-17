@@ -123,9 +123,9 @@ def get_metrics_manager():
     return metrics_manager
 
 
-def register_metrics(name: str, big_latency=False, kafka=False):
+def register_metrics(manager: MetricsManager):
     global metrics_manager
-    metrics_manager = MetricsManager(name, big_latency, kafka)
+    metrics_manager = manager
 
 
 class MetricsHandler(web.RequestHandler):
@@ -139,6 +139,16 @@ class MetricsHandler(web.RequestHandler):
         self.write(pc.generate_latest())
 
 
+def kv_for_show(body: dict):
+    ret = {}
+    for k, v in body.items():
+        if isinstance(v, dict):
+            ret[k] = kv_for_show(v)
+        else:
+            ret[k] = v if len(str(v)) < 200 else "..."
+    return ret
+
+
 pass_path = ["/healthcheck", "/metrics"]
 class PrometheusMixIn(web.RequestHandler):
     def prepare(self):
@@ -150,8 +160,7 @@ class PrometheusMixIn(web.RequestHandler):
         elif self.request.headers.get('Content-Type') == "application/json":
             body = json.loads(self.request.body)
             try:
-                print_kv = {k: v for k, v in body.items() if len(str(v)) < 200}
-                logging.info(f"{self.request.path} part body: {print_kv}")
+                logging.info(f"{self.request.path} part body: {kv_for_show(body)}")
             except Exception as e:
                 pass
 
@@ -173,8 +182,7 @@ class PrometheusMixIn(web.RequestHandler):
     def write(self, chunk):
         if self.request.path not in pass_path:
             if isinstance(chunk, dict):
-                print_kv = {k: v for k, v in chunk.items() if len(str(v)) < 200}
-                logging.info(f"{self.request.path} part response: {print_kv}")
+                logging.info(f"{self.request.path} part response: {kv_for_show(chunk)}")
         super().write(chunk)
 
 

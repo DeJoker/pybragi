@@ -66,8 +66,9 @@ class CORSBaseHandler(web.RequestHandler):
         self.finish()
 
 
-def make_tornado_web(service=""):
-    metrics.register_metrics(name=service)
+def make_tornado_web(service: str, big_latency=False, kafka=False):
+    metrics_manager = metrics.MetricsManager(service, big_latency, kafka)
+    metrics.register_metrics(metrics_manager)
     app = web.Application(
         [
             (r"/echo", Echo),
