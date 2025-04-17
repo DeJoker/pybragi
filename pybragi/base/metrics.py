@@ -36,27 +36,27 @@ class MetricsManager:
             latency_buckets = MetricsManager.latency_buckets
         
         self.server_name = name
-        self.request_qps = pc.Counter("metrics_httpsrv_qps", "http接口请求量", MetricsManager.server_labels)
+        self.request_qps = pc.Counter("httpsrv_qps", "http接口请求量", MetricsManager.server_labels)
         self.request_histogram = pc.Histogram(
-            "metrics_httpsrv_latency_histogram",
+            "httpsrv_latency",
             "http接口请求时延",
             MetricsManager.server_labels,
             buckets=latency_buckets,
         )
 
         self.task_queue_length = pc.Gauge(
-            "metrics_task_queue_length", "任务队列长度", MetricsManager.task_queue_labels
+            "task_queue_length", "任务队列长度", MetricsManager.task_queue_labels
         )
 
         self.caller_histogram = pc.Histogram(
-            "caller_request_latency_histogram",
+            "caller_request_latency",
             "请求外部接口时延",
             [*MetricsManager.service_label, "url"],
             buckets=latency_buckets,
         )
 
         self.task_latency_histogram = pc.Histogram(
-            "metrics_task_latency_histogram",
+            "task_latency",
             "任务处理时延",
             [*MetricsManager.service_label, "task"],
             buckets=latency_buckets,
@@ -64,24 +64,24 @@ class MetricsManager:
 
         task_total_buckets = [i for i in range(30)]
         self.total_request_lantency = pc.Histogram(
-            "metrics_request_sec_histogram",
+            "request_sec_histogram",
             "请求整体处理时间",
             MetricsManager.service_label,
             buckets=task_total_buckets,
         )
 
         self.batch_process = pc.Histogram(
-            "metrics_batch_process", "批处理数量", MetricsManager.task_queue_labels, buckets=[1, 2, 4, 6, 8]
+            "batch_process", "批处理数量", MetricsManager.task_queue_labels, buckets=[1, 2, 4, 6, 8]
         )
 
         self.token_speed = pc.Histogram(
-            "metrics_infer_speed", "infer speed token/s", MetricsManager.speed_labels, buckets=MetricsManager.speed_buects
+            "infer_speed", "infer speed token/s", MetricsManager.speed_labels, buckets=MetricsManager.speed_buects
         )
         self.ttft_latency = pc.Histogram(
-            "metrics_ttft_latency", "ttft latency", MetricsManager.speed_labels, buckets=MetricsManager.latency_buckets
+            "ttft_latency", "ttft latency", MetricsManager.speed_labels, buckets=MetricsManager.latency_buckets
         )
         self.tpot_latency = pc.Histogram(
-            "metrics_tpot_latency", "tpot latency", MetricsManager.speed_labels, buckets=MetricsManager.latency_buckets
+            "tpot_latency", "tpot latency", MetricsManager.speed_labels, buckets=MetricsManager.latency_buckets
         )
         
 
@@ -103,11 +103,8 @@ class MetricsManager:
 
             self.task_get_latency = pc.Histogram("task_total_latency", "获取任务-时延", ["topic"], buckets=latency_buckets)
 
-        self.triton_down = pc.Gauge("triton_down", "triton服务down", ["endpoint"])
-        self.remote_down = pc.Gauge("remote_down", "远端服务down", [*MetricsManager.service_label, "endpoint"])
-
+        self.remote_down = pc.Gauge("remote_down", "远端服务down", ["endpoint"])
         self.except_cnt = pc.Counter("except_cnt", "异常数量", ["type", "except"])
-        self.drop_cnt = pc.Counter("drop_cnt", "丢弃请求数量", ["topic"])
 
         self.status = pc.Gauge(
             "status", "状态值", ["type"]
