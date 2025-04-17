@@ -205,8 +205,12 @@ class StreamMetrics:
         current = time.perf_counter()
         if token_len:
             self.output_token_count = token_len
+        
+        if self.output_token_count > 0 and current > self.start_perf:
+            self.output_speed = self.output_token_count/(current-self.start_perf)
+        else:
+            self.output_speed = 0
             
-        self.output_speed = self.output_token_count/(current-self.start_perf)
         self.infer_total = current-self.start_perf
         self.delta_streaming = self.infer_total-self.ttft
 

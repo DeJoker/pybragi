@@ -40,6 +40,8 @@ if __name__ == "__main__":
 
     running_status = RunningStatus()
 
+    # decorators are applied from bottom to top
+    # 所以应该在executor内执行    如果相反代表counter仅作用于executor.submit 就释放了running_decorator 
     @running_status.running_decorator
     def test_running_status():
         logging.info("running")

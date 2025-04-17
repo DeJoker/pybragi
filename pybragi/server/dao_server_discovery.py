@@ -1,7 +1,6 @@
 
 import logging
-import time
-from functools import wraps
+from datetime import datetime
 from pybragi.base import mongo_base
 from pybragi.base import time_utils
 
@@ -10,11 +9,16 @@ server_table = "servers"
 
 
 def register_server(ipv4: str, port: int, name: str):
-    now = round(time.time(), 4)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
     query = {"ipv4": ipv4, "port": port, "name": name,}
     update = {
-        "$set": {"status": "online", "timestamp": now}, 
-        "$push": {"history": {"status": "online", "timestamp": now}}
+        "$set": {"status": "online", "datetime": now}, 
+        "$push": {
+            "history": {
+                "$each": [{ "status": "online", "datetime": now }],
+                "$slice": -10  # 只保留最近的10条记录
+            }
+        }
     }
     mongo_base.update_item(server_table, query, update, upsert=True)
 
@@ -23,14 +27,14 @@ def unregister_server(ipv4: str, port: int, name: str, status: str = "offline"):
     if status == "online":
         status = "offline" # online is forbid for unregister
 
-    now = round(time.time(), 4)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
     query = {"ipv4": ipv4, "port": port, "name": name,}
     logging.info(f"{query}")
     mongo_base.update_item(server_table, query, {
-                "$set": { "status": status, "timestamp": now },
+                "$set": { "status": status, "datetime": now },
                 "$push": { 
                     "history": {
-                          "$each": [{ "status": status, "timestamp": now }],
+                          "$each": [{ "status": status, "datetime": now }],
                           "$slice": -10  # 只保留最近的10条记录
                     }
                 }
