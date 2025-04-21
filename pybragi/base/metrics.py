@@ -83,6 +83,9 @@ class MetricsManager:
         self.tpot_latency = pc.Histogram(
             "tpot_latency", "tpot latency", MetricsManager.speed_labels, buckets=MetricsManager.latency_buckets
         )
+        self.max_itl_latency = pc.Histogram(
+            "max_itl_latency", "max itl latency", MetricsManager.speed_labels, buckets=MetricsManager.latency_buckets
+        )
         
 
         if kafka:
@@ -184,6 +187,8 @@ class PrometheusMixIn(web.RequestHandler):
 
 
 class StreamMetrics:
+    # Inter-Token Latency (ITL) ： 在第一个令牌后生成每个后续令牌所需的时间，与流相关
+    # Time Per Output Token (TPOT): 对于非流请求，在输出序列中生成每个令牌的平均时间
     def __init__(self, request_id, timestamp2, prompt_len) -> None:
         self.request_id = request_id
         self.timestamp2 = timestamp2
@@ -217,6 +222,7 @@ class StreamMetrics:
             self.output_speed = 0
             
         self.infer_total = current-self.start_perf
+        self.tpot = self.infer_total/self.output_token_count
         self.delta_streaming = self.infer_total-self.ttft
 
     def dict(self):
@@ -227,7 +233,8 @@ class StreamMetrics:
             "produce_at": self.timestamp2,
             "infer_start_delta": self.start-self.timestamp2,
             "ttft": self.ttft,
-            "tpot": self.max_token_delta,
+            "tpot": self.tpot,
+            "max_itl": self.max_token_delta,
             "speed": self.output_speed,
             "infer_total": self.infer_total,
             "delta_streaming": self.delta_streaming,
@@ -237,7 +244,7 @@ class StreamMetrics:
     def __str__(self):
         str = f"request_id={self.request_id} prompt_len:{self.prompt_len} output_token_count:{self.output_token_count} produce_at:{self.timestamp2:.3f} " \
             f"infer_start_delta:{self.start-self.timestamp2:.3f} " \
-            f"ttft:{self.ttft:.3f} tpot:{self.max_token_delta:.3f} speed:{self.output_speed:.3f} token/s " \
+            f"ttft:{self.ttft:.3f} tpot:{self.tpot:.3f} max_itl:{self.max_token_delta:.3f} speed:{self.output_speed:.3f} token/s " \
             f"infer_total:{self.infer_total:.3f} delta_streaming:{self.delta_streaming:.3f} from_request_total:{time.time()-self.timestamp2:.3f}"
         return str
 
@@ -253,10 +260,10 @@ if __name__ == "__main__":
         met.finish_infer()
         print(f"{met}")
 
-    test_metrics()
+    # test_metrics()
 
-    # print(MetricsManager.latency_buckets)
-    # print(MetricsManager.big_latency_buckets)
+    print(MetricsManager.latency_buckets)
+    print(MetricsManager.big_latency_buckets)
     # test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=MetricsManager.big_latency_buckets)
     # test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=[0,1,1.1,1]) # Buckets not in sorted order
     # test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=[0,1,1]) # Duplicated timeseries in CollectorRegistry
