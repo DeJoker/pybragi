@@ -12,7 +12,7 @@ if __name__ == "__main__":
         ticket.access_token = uuid.uuid4().hex
         ticket.type = "".join(random.choices(string.digits+string.ascii_letters, k=10))
         ticket.user_id = "user123"
-        ticket.time = int(time.time()) + 300
+        ticket.milli_timestamp = int(time.time() * 1000) + 299000
         # ticket.platform_id = 1
         # ticket.device_id = "device456"
         # extend_data = {

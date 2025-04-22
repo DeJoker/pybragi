@@ -12,7 +12,7 @@ class ZyTicket:
     def __init__(self, salt: str):
         self.access_token = ""
         self.randomString = "" # random for each ticket
-        self.time = 0
+        self.milli_timestamp = 0
         self.user_id = ""
         self.platform_id = 0
         self.device_id = ""
@@ -37,7 +37,7 @@ class ZyTicket:
             self.access_token = parts[0]
             self.randomString = parts[1]
 
-            self.time = int(parts[2])
+            self.milli_timestamp = int(parts[2])
             self.user_id = parts[3]
             self.platform_id = int(parts[4])
             
@@ -54,17 +54,17 @@ class ZyTicket:
             return str(e)
     
     def encode(self):
-        ticket_str = f"{self.access_token}@{self.randomString}@{self.time}@{self.user_id}@{self.platform_id}@{self.device_id}@{self.extend_data_json}"
+        ticket_str = f"{self.access_token}@{self.randomString}@{self.milli_timestamp}@{self.user_id}@{self.platform_id}@{self.device_id}@{self.extend_data_json}"
         encrypted = aes_encrypt(ticket_str, self.salt)
         return encrypted
     
     def allow(self):
         if not self.access_token or not self.user_id:
             return False
-        if abs(self.time - int(time.time())) > 60*5: # timestamp valid in 5 minutes
+        if abs(self.milli_timestamp/1000 - int(time.time())) > 60*5: # timestamp valid in 5 minutes
             return False
         return True
     
     def __str__(self):
-        return f"ZyTicket(access_token={self.access_token}, randomString={self.randomString}, time={self.time}, user_id={self.user_id}, platform_id={self.platform_id}, device_id={self.device_id}, extend_data={self.extend_data})"
+        return f"ZyTicket(access_token={self.access_token}, randomString={self.randomString}, milli_timestamp={self.milli_timestamp}, user_id={self.user_id}, platform_id={self.platform_id}, device_id={self.device_id}, extend_data={self.extend_data})"
 
