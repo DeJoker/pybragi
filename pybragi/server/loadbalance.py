@@ -25,7 +25,7 @@ def roundrobin(servers) -> str:
                 return host
         except Exception as e:
             traceback.print_exc()
-            dao_server_discovery.unregister_server(server['ipv4'], server['port'], server['name'], status="offline_unhealthy")
+            dao_server_discovery.unregister_server(server['ipv4'], server['port'], server['name'], status="offline_unhealthy", type=server['type'])
             logging.error(f"healthcheck failed, unregister server: {server['ipv4']}:{server['port']}")
             continue
     raise Exception("No healthy server found")
@@ -62,7 +62,7 @@ def weighted_roundrobin(servers) -> str:
                 return host
         except Exception as e:
             traceback.print_exc()
-            dao_server_discovery.unregister_server(server['ipv4'], server['port'], server['name'], status="offline_unhealthy")
+            dao_server_discovery.unregister_server(server['ipv4'], server['port'], server['name'], status="offline_unhealthy", type=server['type'])
             logging.error(f"healthcheck failed, unregister server: {server['ipv4']}:{server['port']}")
             continue
     
@@ -89,7 +89,7 @@ def hash_balance(servers: list, key: str) -> str:
                 return host
         except Exception as e:
             traceback.print_exc()
-            dao_server_discovery.unregister_server(server['ipv4'], server['port'], server['name'], status="offline_unhealthy")
+            dao_server_discovery.unregister_server(server['ipv4'], server['port'], server['name'], status="offline_unhealthy", type=server['type'])
             servers = servers[1:] # remove the unhealthy server
             logging.error(f"healthcheck failed, unregister server: {server['ipv4']}:{server['port']}")
             continue

@@ -115,7 +115,7 @@ class MetricsManager:
 
 
 
-metrics_manager: MetricsManager
+metrics_manager: MetricsManager = None
 
 
 def get_metrics_manager():
@@ -197,8 +197,14 @@ class StreamMetrics:
         self.start = time.time()
         self.start_perf = time.perf_counter()
         self.last_token_time = 0
-        self.max_token_delta = 0
         self.output_token_count = 0
+        self.output_speed = 0
+        self.infer_total = 0
+
+        self.ttft = float('inf')
+        self.tpot = float('inf')
+        self.max_token_delta = float('inf')
+        self.delta_streaming = float('inf')
 
     def output_token(self):
         current = time.perf_counter()
@@ -206,24 +212,35 @@ class StreamMetrics:
         if self.output_token_count == 0:
            self.ttft = current - self.start_perf
         else:
+            if self.max_token_delta == float('inf'):
+                self.max_token_delta = current-self.last_token_time
             self.max_token_delta = max(self.max_token_delta, current-self.last_token_time)
         self.output_token_count += 1
         self.last_token_time = current
+        self.infer_total = current-self.start_perf
         return
     
-    def finish_infer(self, token_len=0):
+    def finish_infer(self, token_len=0, backend: str = "openai"):
         current = time.perf_counter()
         if token_len:
             self.output_token_count = token_len
         
+        self.infer_total = current-self.start_perf
         if self.output_token_count > 0 and current > self.start_perf:
             self.output_speed = self.output_token_count/(current-self.start_perf)
-        else:
-            self.output_speed = 0
-            
-        self.infer_total = current-self.start_perf
-        self.tpot = self.infer_total/self.output_token_count
-        self.delta_streaming = self.infer_total-self.ttft
+            self.tpot = self.infer_total/self.output_token_count
+
+        if self.ttft < float('inf'):
+            self.delta_streaming = self.infer_total-self.ttft
+
+        if get_metrics_manager():
+            get_metrics_manager().token_speed.labels(backend).observe(self.output_speed)
+            if self.ttft < float('inf'):
+                get_metrics_manager().ttft_latency.labels(backend).observe(self.ttft)
+            if self.tpot < float('inf'):
+                get_metrics_manager().tpot_latency.labels(backend).observe(self.tpot)
+            if self.max_token_delta < float('inf'):
+                get_metrics_manager().max_itl_latency.labels(backend).observe(self.max_token_delta)
 
     def dict(self):
         return {
@@ -242,6 +259,7 @@ class StreamMetrics:
         }
 
     def __str__(self):
+        # self.finish_infer()
         str = f"request_id={self.request_id} prompt_len:{self.prompt_len} output_token_count:{self.output_token_count} produce_at:{self.timestamp2:.3f} " \
             f"infer_start_delta:{self.start-self.timestamp2:.3f} " \
             f"ttft:{self.ttft:.3f} tpot:{self.tpot:.3f} max_itl:{self.max_token_delta:.3f} speed:{self.output_speed:.3f} token/s " \
@@ -254,16 +272,18 @@ if __name__ == "__main__":
     def test_metrics():
         import random
         met = StreamMetrics(request_id="123", timestamp2=time.time(), prompt_len=100)
+        print(f"{met}")
         for _ in range(10):
             time.sleep(random.randint(1, 50)*0.001)
             met.output_token()
+            print(f"{met}")
         met.finish_infer()
         print(f"{met}")
 
-    # test_metrics()
+    test_metrics()
 
-    print(MetricsManager.latency_buckets)
-    print(MetricsManager.big_latency_buckets)
+    # print(MetricsManager.latency_buckets)
+    # print(MetricsManager.big_latency_buckets)
     # test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=MetricsManager.big_latency_buckets)
     # test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=[0,1,1.1,1]) # Buckets not in sorted order
     # test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=[0,1,1]) # Duplicated timeseries in CollectorRegistry

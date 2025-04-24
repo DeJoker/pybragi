@@ -8,7 +8,6 @@ from tornado.concurrent import run_on_executor
 from pybragi.server.loadbalance import roundrobin, hash_balance
 from pybragi.server.dao_server_discovery import get_server_online
 from pybragi.base.metrics import PrometheusMixIn
-from pybragi.base.hash import djb2_hash
 from pybragi.base.base_handler import CORSBaseHandler
 
 
