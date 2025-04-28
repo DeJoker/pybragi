@@ -1,10 +1,10 @@
+from pybragi.base import log
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
-import logging
 from tornado import web, gen, ioloop
 from tornado.concurrent import run_on_executor
 
-import json
+import asyncio
 from datetime import datetime
 from pybragi.base import metrics
 
@@ -76,22 +76,17 @@ def make_tornado_web(service: str, big_latency=False, kafka=False):
             (r"/metrics", metrics.MetricsHandler),
         ]
     )
-    # app.add_handlers(r"/metrics", metrics.MetricsHandler)
     return app
+
+def run_tornado_app(app: web.Application, port=8888):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    app.listen(port)
+    ioloop.IOLoop.current().start()
+
 
 # python -m service.base.base_handler
 if __name__ == "__main__":
-    import asyncio
-    from tornado.httpserver import HTTPServer
-
-    def run_tornado_app(app: web.Application, port=8888):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        server1 = HTTPServer(app)
-        server1.listen(port)
-        ioloop.IOLoop.current().start()
-    
     app = make_tornado_web(__file__)
     run_tornado_app(app)
 

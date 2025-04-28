@@ -8,6 +8,9 @@ from pybragi.base import time_utils
 total_log_count = 0
 last_log_file = ""
 
+
+# not strict threading lock, but it's ok for static log_dir
+
 @time_utils.elapsed_time_limit(0.05) # about 50ms to nas
 def log_request_to_file(name, request_json, log_dir="/cano_nas01/cyj/request", max_lines=500):
     global total_log_count, last_log_file
