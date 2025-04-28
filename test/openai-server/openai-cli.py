@@ -1,17 +1,24 @@
 from pybragi.base import log
 import logging
-
 import time
 from openai import OpenAI
+
+# url = "http://14.103.229.186:50001"
+url = "http://llm-gateway.character.xunlei.com"
+
 client = OpenAI(
-    base_url="http://localhost:8293/v1",
-    api_key="zy-7788",
-    max_retries=0,
+    base_url=f"{url}/v1",
+    api_key="zy-fqwefqwef",
+    max_retries=3,
     timeout=2
 )
 
+# curl localhost:50001/v1/models | jq .
+res = client.models.list()
+logging.info(res)
+
 completion = client.chat.completions.create(
-  model="aabb",
+  model="qwen2572_short_text2",
   messages=[
     {"role": "user", "content": "你是谁啊"}
   ],
@@ -32,12 +39,15 @@ completion = client.chat.completions.create(
 
 trim_cnt = 10
 for chunk in completion:
-    logging.info(chunk.choices[0].delta.content)
-    trim_cnt -= 1
-    if trim_cnt <= 0:
-        break
+    if chunk.choices[0].delta.content:
+        logging.info(chunk.choices[0].delta.content)
+        trim_cnt -= 1
+        if trim_cnt <= 0:
+            break
+completion.close()
+print("done")
 
-
-# sglang log
 # curl localhost:9900/configure_logging -H 'Content-Type: application/json' -d '{"log_requests":true, "log_requests_level":1, "dump_requests_threshold": 100}'
+
+
 
