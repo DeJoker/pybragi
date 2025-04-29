@@ -1,4 +1,5 @@
-from Crypto.Cipher import AES
+from Crypto.Cipher import AES # pip install pycryptodome
+# python -c "import importlib.metadata; dists = importlib.metadata.packages_distributions(); print(dists.get('Crypto'))" # ['pycryptodome', 'pycryptodome']
 import base64
 
 

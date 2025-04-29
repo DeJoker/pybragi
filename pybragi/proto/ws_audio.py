@@ -1,7 +1,5 @@
 from typing import Any, Callable, Dict
-from pydantic import BaseModel, Field, field_validator, model_validator
-
-ticket_salt = "nIASD91jsnfvas9y"
+from pydantic import BaseModel, Field, field_validator
 
 
 run_task_action = "run-task"
@@ -26,22 +24,19 @@ class Header(BaseModel):
     error_message: str = ""
     attributes: Dict[str, Any] = {}
 
-    @model_validator(mode='after')
-    def check_action_or_event(self) -> 'Header':
-        action_provided = bool(self.action)
-        event_provided = bool(self.event)
-
-        if not action_provided and not event_provided:
-            raise ValueError("must provide either action or event")
-
-        if action_provided and self.action not in valid_actions:
-            raise ValueError(f"invalid action '{self.action}'. must be one of {valid_actions}")
-
-        if event_provided and self.event not in valid_events:
-            raise ValueError(f"invalid event '{self.event}'. must be one of {valid_events}")
-
-        return self
-
+    @field_validator('action', mode='after')
+    @classmethod
+    def validate_action(cls, v):
+        if v not in valid_actions:
+            raise ValueError(f"action must be one of {valid_actions}")
+        return v
+    
+    @field_validator('event', mode='after')
+    @classmethod
+    def validate_event(cls, v):
+        if v not in valid_events:
+            raise ValueError(f"event must be one of {valid_events}")
+        return v
 
 # generated-audio & append-audio
 class AudioInfo(BaseModel):
@@ -63,4 +58,6 @@ class RunTask(BaseModel):
 class Request(BaseModel):
     header: Header
     payload: Any = None
+
+
 

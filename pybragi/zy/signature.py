@@ -60,10 +60,10 @@ class ZyTicket:
     
     def allow(self):
         if not self.access_token or not self.user_id:
-            return False
+            return False, "invalid ticket"
         if abs(self.milli_timestamp/1000 - int(time.time())) > 60*5: # timestamp valid in 5 minutes
-            return False
-        return True
+            return False, "ticket expired"
+        return True, None
     
     def __str__(self):
         return f"ZyTicket(access_token={self.access_token}, randomString={self.randomString}, milli_timestamp={self.milli_timestamp}, user_id={self.user_id}, platform_id={self.platform_id}, device_id={self.device_id}, extend_data={self.extend_data})"

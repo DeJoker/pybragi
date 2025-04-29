@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import random
 import uuid
@@ -12,6 +11,7 @@ import time
 import websocket # pip install websocket-client==1.8.0
 import proto_ws
 from datetime import datetime
+from pybragi.zy.signature import ZyTicket # pip install pybragi==0.0.13.post2
 
 def parse_event(message: dict):
     header = message['header']
@@ -19,30 +19,28 @@ def parse_event(message: dict):
 
     header = proto_ws.Header(**header)
 
-    if header.event == "task-started":
-        logging.info(f"task-started: {header}")
-    elif header.event == "result-generated":
+    if header.event == proto_ws.task_started_event:
+        logging.info(f"{header.event}: {header}")
+    elif header.event == proto_ws.result_generated_event:
         result = proto_ws.ResultGenerated(**payload)
-        logging.info(f"result-generated: {payload} {result}")
-    elif header.event == "task-finished":
+        logging.info(f"{header.event}: {header} {result}")
+    elif header.event == proto_ws.task_finished_event:
         finished = proto_ws.TaskFinished(**payload)
-        logging.info(f"task-finished: {header} {finished}")
-    elif header.event == "task-failed":
-        error = proto_ws.Error(**payload)
-        logging.info(f"error: {header} {error}")
+        logging.info(f"{header.event}: {header} {finished}")
+    elif header.event == proto_ws.task_failed_event:
+        logging.info(f"{header.event}: {header} {payload}")
+    elif header.event == proto_ws.audio_received_event:
+        audio_info = proto_ws.AudioInfo(**payload)
+        logging.info(f"{header.event}: {header} {audio_info}")
     else:
         logging.info(f"unknown event: {header}")
 
 
 
-
-
-
 class WebSocketClient:
-    def __init__(self, url):
-        self.url = url
+    def __init__(self, host):
+        self.host = host
         self.ws = None
-        self.running = False
         self.connected = False
 
     def on_message(self, ws, message):
@@ -68,6 +66,17 @@ class WebSocketClient:
 
     def connect(self):
         # websocket.enableTrace(True)
+        
+        ticket = ZyTicket(proto_ws.ticket_salt)
+        ticket.access_token = "1234567890"
+        ticket.randomString = "test"
+        ticket.milli_timestamp = int(time.time() * 1000)
+        # ticket.milli_timestamp = int(time.time() * 1000) - 500 * 1000 #$ expired in 5 minutes
+        ticket.user_id = "1234567890"
+        ticket.platform_id = 1
+        self.ticket = ticket
+
+        self.url = f"{self.host}?ticker={self.ticket.encode()}"
         self.ws = websocket.WebSocketApp(
             self.url,
             on_open=self.on_open,
@@ -75,8 +84,7 @@ class WebSocketClient:
             on_error=self.on_error,
             on_close=self.on_close
         )
-        self.running = True
-        
+
         self.client_thread = threading.Thread(target=self.ws.run_forever)
         self.client_thread.daemon = True
         self.client_thread.start()
@@ -94,7 +102,6 @@ class WebSocketClient:
     def disconnect(self):
         if self.ws:
             self.ws.close()
-        self.running = False
         logging.info("disconnected")
 
     def send_json(self, data: dict):
@@ -128,7 +135,7 @@ class WebSocketClient:
     def send_audio(self, audio_url):
         # 1. 发送 run-task 指令
         task_id = f"{int(time.time())}-{uuid.uuid4()}"
-        run_task_header = proto_ws.Header(action="run-task", task_id=task_id, attributes={"a": 1, "b": "222"})
+        run_task_header = proto_ws.Header(action=proto_ws.run_task_action, task_id=task_id, attributes={"a": 1, "b": "222"})
         run_task_payload = proto_ws.RunTask(task="echo", parameters={
             "rvc_name": "shengongbao-rvc",
             "seed_name": "whisper_small",
@@ -153,8 +160,8 @@ class WebSocketClient:
         for i in range(send_times):
             # append-audio指令
             send_data = resp.content[i*send_bytes:(i+1)*send_bytes]
-            append_audio_header = proto_ws.Header(action="append-audio", task_id=task_id,)
-            append_audio_payload = proto_ws.AudioGenerated(audio_size=len(send_data), audio_duration="00:00:05.23")
+            append_audio_header = proto_ws.Header(action=proto_ws.append_audio_action, task_id=task_id,)
+            append_audio_payload = proto_ws.AudioInfo(audio_size=len(send_data), audio_duration="00:00:05.23")
             append_audio_request = proto_ws.Request(header=append_audio_header, payload=append_audio_payload)
             self.send_json(append_audio_request.model_dump())
 
@@ -163,7 +170,7 @@ class WebSocketClient:
             time.sleep(random.randint(100, 300)/1000)
 
         # 3. 发送结束指令
-        finish_task_header = proto_ws.Header(action="finish-task", task_id=task_id,)
+        finish_task_header = proto_ws.Header(action=proto_ws.finish_task_action, task_id=task_id,)
         finish_task_request = proto_ws.Request(header=finish_task_header, payload=None)
         self.send_json(finish_task_request.model_dump())
 
@@ -176,10 +183,12 @@ def mock_json():
     }
 
 
-def main(url="ws://localhost:8888/ws", audio_urls=[]):
-    client = WebSocketClient(url)
+def main(audio_urls=[]):
+    host = "ws://14.103.229.186:50004/ws"
+    # host = "ws://localhost:50004/ws"
+    client = WebSocketClient(host)
     client.connect()
-    while client.running:
+    while client.connected:
         # client.send_json(mock_json())
         # time.sleep(random.randint(100, 300)/1000)
 

@@ -2,6 +2,8 @@ import random
 import time
 from pybragi.base import log
 import logging
+import signal
+from tornado import ioloop
 from tornado.websocket import WebSocketHandler
 from concurrent.futures import ThreadPoolExecutor
 from tornado.concurrent import run_on_executor
@@ -11,6 +13,7 @@ import proto_ws
 from datetime import datetime
 from pybragi.base import metrics
 from pybragi.base.base_handler import make_tornado_web, run_tornado_app
+from pybragi.zy.signature import ZyTicket
 
 class WSHandler(metrics.PrometheusMixIn, WebSocketHandler):
     executor = ThreadPoolExecutor(30)
@@ -19,8 +22,32 @@ class WSHandler(metrics.PrometheusMixIn, WebSocketHandler):
     
     async def open(self):
         logging.info(f"connected from {self.request.remote_ip}")
+
+        ticker_str = self.get_query_argument("ticker", default=None)
+        if not ticker_str:
+            logging.warning(f"Connection attempt from {self.request.remote_ip} without ticker. Closing.")
+            self.close(code=1008, reason="Missing authentication ticker") # 1008: Policy Violation
+            return
+        
+        try:
+            ticket = ZyTicket(proto_ws.ticket_salt)
+            ticket.decode(ticker_str)
+            ok, msg = ticket.allow()
+            if ok:
+                logging.info(f"Authenticated connection from {self.request.remote_ip}, {ticket}")
+                WSHandler.clients.add(self)
+                super().open()
+            else:
+                logging.warning(f"Authentication failed for {self.request.remote_ip}. error:{msg}. Closing.")
+                self.close(code=1008, reason=f"Invalid authentication ticker, error: {msg}")
+
+        except Exception as e:
+            logging.error(f"Error during authentication for {self.request.remote_ip}: {e}. Closing.")
+            self.close(code=1011, reason="Internal server error during authentication") # 1011: Internal Error
+        
         WSHandler.clients.add(self)
         super().open()
+        return
     
     def check_origin(self, origin):
         # logging.info(f"connect from {origin}")
@@ -39,24 +66,29 @@ class WSHandler(metrics.PrometheusMixIn, WebSocketHandler):
     def send_result_generated(self, task_id, data):
         time.sleep(random.randint(100, 300)/1000)
 
-        header = proto_ws.Header(event="result-generated", task_id=task_id,)
-        payload = proto_ws.AudioGenerated(audio_size=len(data), audio_duration="00:00:05.23")
+        header = proto_ws.Header(event=proto_ws.result_generated_event, task_id=task_id,)
+        payload = proto_ws.AudioInfo(audio_size=len(data), audio_duration="00:00:05.23")
         request = proto_ws.Request(header=header, payload=payload)
-        # self.write_message(request.model_dump_json())
 
-        # self.write_message(data)
         return request.model_dump_json(), data
 
     @run_on_executor
     def send_task_finished(self, task_id):
         time.sleep(random.randint(100, 300)/1000)
 
-        header = proto_ws.Header(event="task-finished", task_id=task_id,)
+        header = proto_ws.Header(event=proto_ws.task_finished_event, task_id=task_id,)
         payload = proto_ws.TaskFinished(source_audio_url="http://source.wav", target_audio_url="http://target.wav")
         request = proto_ws.Request(header=header, payload=payload)
-        # self.write_message(request.model_dump_json())
         return request.model_dump_json()
 
+    @run_on_executor
+    def send_audio_received(self, task_id, data):
+        time.sleep(random.randint(100, 300)/1000)
+
+        header = proto_ws.Header(event=proto_ws.audio_received_event, task_id=task_id,)
+        payload = proto_ws.AudioInfo(audio_size=len(data), audio_duration="00:00:05.23")
+        request = proto_ws.Request(header=header, payload=payload)
+        return request.model_dump_json()
 
     def send_message(self, message, binary=False):
         self.write_message(message, binary=binary)
@@ -68,14 +100,18 @@ class WSHandler(metrics.PrometheusMixIn, WebSocketHandler):
             if isinstance(message, str):
                 data = json.loads(message)
                 header = proto_ws.Header(**data["header"])
-                if header.action == "run-task":
+                if header.action == proto_ws.run_task_action:
                     payload = proto_ws.RunTask(**data["payload"])
                     logging.info(f"run-task: {payload}")
                     self.set_task_id(header.task_id)
-                elif header.action == "append-audio":
-                    payload = proto_ws.AudioGenerated(**data["payload"])
+
+                    task_started_header = proto_ws.Header(event=proto_ws.task_started_event, task_id=header.task_id)
+                    message = proto_ws.Request(header=task_started_header, payload={}).model_dump_json()
+                    self.send_message(message)
+                elif header.action == proto_ws.append_audio_action:
+                    payload = proto_ws.AudioInfo(**data["payload"])
                     logging.info(f"append-audio: {payload}")
-                elif header.action == "finish-task":
+                elif header.action == proto_ws.finish_task_action:
                     json_message = await self.send_task_finished(self.client_tasks[self])
                     self.send_message(json_message)
                 else:
@@ -119,7 +155,14 @@ class WSHandler(metrics.PrometheusMixIn, WebSocketHandler):
             logging.error(f"error: {str(e)}")
             return False
     
-    
+def handle_exit_signal(signum, frame):
+    logging.info("Received exit signal. Setting exit event.")
+    tornado_ioloop = ioloop.IOLoop.current()
+    tornado_ioloop.add_callback_from_signal(tornado_ioloop.stop)
+
+
+signal.signal(signal.SIGINT, handle_exit_signal)
+signal.signal(signal.SIGTERM, handle_exit_signal)
 
 
 if __name__ == "__main__":
