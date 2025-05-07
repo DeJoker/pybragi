@@ -11,7 +11,7 @@ import time
 import websocket # pip install websocket-client==1.8.0
 import proto_ws
 from datetime import datetime
-from pybragi.zy.signature import ZyTicket # pip install pybragi==0.0.13.post2
+from pybragi.zy.signature import ZyTicket # pip install pybragi==0.0.13.post4
 
 def parse_event(message: dict):
     header = message['header']

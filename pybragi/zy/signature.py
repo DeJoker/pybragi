@@ -1,4 +1,5 @@
 import time
+import traceback
 from pybragi.base.crypto.ase_ecb_pkcs5 import aes_encrypt, aes_decrypt
 import json
 
@@ -9,7 +10,7 @@ class ZyTicket:
     # access_token@type@time@userid@platformid@deviceid@extend_data_json
     tickerFmt     = "%s@%s@%s@%s@%d@%s@%s"
 
-    def __init__(self, salt: str):
+    def __init__(self, key: str):
         self.access_token = ""
         self.randomString = "" # random for each ticket
         self.milli_timestamp = 0
@@ -18,7 +19,7 @@ class ZyTicket:
         self.device_id = ""
         self.extend_data_json = ""
         self.extend_data = {}
-        self.salt = salt
+        self.key = key
     
     def decode(self, token):
         if not token:
@@ -26,18 +27,22 @@ class ZyTicket:
             
         try:
             token_str = token.decode('utf-8') if isinstance(token, bytes) else token
-            plain_text = aes_decrypt(token_str, self.salt)
+            plain_text = aes_decrypt(token_str, self.key)
             if not plain_text:
                 raise ValueError("decryption failed")
                 
             parts = plain_text.split('@')
             if len(parts) < ZyTicket.ticketFmtLen:
                 raise ValueError("token length error")
+            print(parts)
                 
             self.access_token = parts[0]
             self.randomString = parts[1]
 
-            self.milli_timestamp = int(parts[2])
+            hex_milli_ticks = parts[2]
+            milli_ticks = int(hex_milli_ticks, 16)
+
+            self.milli_timestamp = milli_ticks
             self.user_id = parts[3]
             self.platform_id = int(parts[4])
             
@@ -51,11 +56,11 @@ class ZyTicket:
                     
             return None
         except Exception as e:
-            return str(e)
+            traceback.print_exc()
     
     def encode(self):
         ticket_str = f"{self.access_token}@{self.randomString}@{self.milli_timestamp}@{self.user_id}@{self.platform_id}@{self.device_id}@{self.extend_data_json}"
-        encrypted = aes_encrypt(ticket_str, self.salt)
+        encrypted = aes_encrypt(ticket_str, self.key)
         return encrypted
     
     def allow(self):
@@ -68,3 +73,16 @@ class ZyTicket:
     def __str__(self):
         return f"ZyTicket(access_token={self.access_token}, randomString={self.randomString}, milli_timestamp={self.milli_timestamp}, user_id={self.user_id}, platform_id={self.platform_id}, device_id={self.device_id}, extend_data={self.extend_data})"
 
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="core process service")
+    parser.add_argument("--key", type=str, help="key")
+    parser.add_argument("--ticker", type=str, help="ticker")
+    args = parser.parse_args()
+
+    ticket = ZyTicket(args.key)
+    str = args.ticker
+    ticket.decode(str)
+    print(ticket)
+    print(f"ticket.allow()={ticket.allow()}")
