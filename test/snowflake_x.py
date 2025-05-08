@@ -40,6 +40,7 @@ print("maxuint64", 2**64 - 1)
 print(93101040883586, parse_snowflake(93101040883586))
 print(29852255327621, parse_snowflake(29852255327621))
 print(14992517903964, parse_snowflake(14992517903964))
+print(50034490746159, parse_snowflake(50034490746159))
 
 
 

@@ -103,3 +103,18 @@ def get_batch_items(
         if item:
             items.append(item)
     return items
+
+
+def pretty_print(data):
+    from pydantic import BaseModel
+    if isinstance(data, list):
+        for item in data:
+            if '_id' in item:
+                item['_id'] = str(item['_id'])
+        return json.dumps(data, indent=2, ensure_ascii=False)
+    elif isinstance(data, dict):
+        return json.dumps(data, indent=2, ensure_ascii=False)
+    elif isinstance(data, BaseModel):
+        return data.model_dump_json(indent=2, ensure_ascii=False)
+    else:
+        return str(data)

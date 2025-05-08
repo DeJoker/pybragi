@@ -3,7 +3,6 @@ import traceback
 from pybragi.base.crypto.ase_ecb_pkcs5 import aes_encrypt, aes_decrypt
 import json
 
-
 class ZyTicket:
     ticketFmtLen = 5
 
@@ -34,7 +33,6 @@ class ZyTicket:
             parts = plain_text.split('@')
             if len(parts) < ZyTicket.ticketFmtLen:
                 raise ValueError("token length error")
-            print(parts)
                 
             self.access_token = parts[0]
             self.randomString = parts[1]

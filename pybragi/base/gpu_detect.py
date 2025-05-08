@@ -112,7 +112,6 @@ def get_gpu_utilty_prometheus(query = f'avg_over_time(DCGM_FI_DEV_GPU_UTIL{{Host
         logging.error(f"{response.url} {response.status_code} {response.text}")
 
 if __name__ == '__main__':
-    from service.base import log
 
     def test_local_detect():
         x = continuous_valid_cards(78000, 2)
