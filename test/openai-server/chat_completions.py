@@ -1,16 +1,15 @@
+import time
 import traceback
 import logging
 import json
 from concurrent.futures import ThreadPoolExecutor
+from tornado import ioloop
 from tornado.concurrent import run_on_executor
-
 from tornado.iostream import StreamClosedError
-from pybragi.base.metrics import PrometheusMixIn
-
-from pybragi.base.metrics import StreamMetrics
+from pybragi.base.metrics import PrometheusMixIn, StreamMetrics
 
 from .openai_transmit import Config
-        
+
 class ChatCompletions(PrometheusMixIn):
     executor = ThreadPoolExecutor(Config.MaxRunningCount+2)
 
@@ -22,22 +21,21 @@ class ChatCompletions(PrometheusMixIn):
         super().on_connection_close()
 
     def initialize(self):
+        self.ioloop = ioloop.IOLoop.current()
         self.client_disconnected = False
         self.request.connection.set_close_callback(self.on_connection_close)
     
-    @run_on_executor
     def fetch_openai_stream(self, **kwargs):
-        from openai import OpenAI
+        from openai import OpenAI, NOT_GIVEN
         client = OpenAI(
             base_url=f"http://localhost:{Config.OpenAIPort}/v1",
             api_key="xxx",
             max_retries=1,
-            timeout=2,
         )
         return client.chat.completions.create(
             model="",
             messages=kwargs.pop("messages", []),
-            frequency_penalty=kwargs.pop("frequency_penalty", None),
+            frequency_penalty=kwargs.pop("frequency_penalty", 0.0),
             max_tokens=kwargs.pop("max_tokens", 512),
             temperature=kwargs.pop("temperature", 0.8),
             top_p=kwargs.pop("top_p", 0.8),
@@ -45,11 +43,13 @@ class ChatCompletions(PrometheusMixIn):
             extra_body=kwargs
         )
 
-    async def post(self):
+    @run_on_executor
+    def post(self):
         request = self.request.body
         request_json = json.loads(request)
         request_id = request_json.pop("request_id", "")
-        timestamp2 = request_json.pop("timestamp2", 0)
+        timstamp2 = request_json.pop("timstamp2", round(time.time(), 3))
+        messages = request_json.get("messages", [])
 
         # 设置SSE响应头
         self.set_header("Content-Type", "text/event-stream")
@@ -58,8 +58,8 @@ class ChatCompletions(PrometheusMixIn):
 
         reply = ""
         try:
-            metrics = StreamMetrics(request_id, timestamp2, 3)
-            completion_stream = await self.fetch_openai_stream(**request_json)
+            metrics = StreamMetrics(request_id, timstamp2, len(str(messages)))
+            completion_stream = self.fetch_openai_stream(**request_json)
             
             for chunk in completion_stream:
                 if chunk.choices[0].delta.content:
@@ -71,7 +71,7 @@ class ChatCompletions(PrometheusMixIn):
                     return
                 
                 self.write(f"data: {chunk.model_dump_json()}\n\n")
-                await self.flush()
+                self.ioloop.add_callback(self.flush)
             
         except StreamClosedError:
             completion_stream.close()

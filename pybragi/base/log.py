@@ -4,7 +4,6 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import os
 from datetime import datetime
-from . import scribe_log
 
 format = "%(levelname)s %(asctime)s.%(msecs)03d [%(process)d-%(threadName)s] (%(funcName)s@%(filename)s:%(lineno)03d) %(message)s"
 datefmt = "%Y-%m-%d %H:%M:%S"
@@ -106,6 +105,7 @@ def init_logger(service, file_enabled=False, scribe_category='', file_path='', t
         file_handler.setFormatter(fmt)
         logger.addHandler(file_handler)
     if os.getenv('NODE_IP') and os.getenv('RUN_ENVIRONMENT') == 'k8s':
+        from . import scribe_log
         host = os.getenv('NODE_IP', '')
         handler = scribe_log.ScribeHandler(host=host, port=9121, category=scribe_category)
         handler.setFormatter(fmt)

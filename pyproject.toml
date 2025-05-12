@@ -14,7 +14,7 @@ Repository = "https://github.com/DeJoker/pybragi"
 
 [project]
 name = "pybragi"
-version = "0.0.14"
+version = "0.0.14.post1"
 description = "pybragi is server framework"
 authors = [
     {name = "DeJoker", email = "localjie@163.com"},
@@ -27,8 +27,6 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "facebook-scribe==2.0.post1",
-    "thrift",
     "pydantic",
     "ifaddr",
     "psutil>=5.9.1",
@@ -42,7 +40,9 @@ dependencies = [
     "nvidia-ml-py",
     "readerwriterlock",
     "pycryptodome",
-    "websocket-client>=1.8.0"
+    "websocket-client>=1.8.0",
+    "tqdm",
+    "pycurl"
 ]
 
 [tool.poetry]
@@ -55,7 +55,7 @@ exclude = ["assets*", "benchmark*", "docs*", "dist*", "demo*", "tests*",]
 
 [project.optional-dependencies]
 image = ["opencv-python>=4.4.0", "pillow"]
-zy = ["tos>=2.8.1", "volcengine>=1.0.174"]
+zy = ["tos>=2.8.1", "volcengine>=1.0.174", "facebook-scribe==2.0.post1", "thrift"]
 test = ["jsonlines", "matplotlib", "ujson>=1.35"]
 all = ["pybragi[image]", "pybragi[zy]"]
 dev = ["pybragi[all]", "pybragi[test]"]

@@ -70,8 +70,8 @@ class WebSocketClient:
         ticket = ZyTicket(proto_ws.ticket_salt)
         ticket.access_token = "1234567890"
         ticket.randomString = "test"
-        # ticket.milli_timestamp = hex(int(time.time() * 1000))[2:]
-        ticket.milli_timestamp = int(time.time() * 1000)
+        ticket.milli_timestamp = hex(int(time.time() * 1000))[2:]
+        # ticket.milli_timestamp = int(time.time() * 1000)
         # ticket.milli_timestamp = int(time.time() * 1000) - 500 * 1000 #$ expired in 5 minutes
         ticket.user_id = "1234567890"
         ticket.platform_id = 1
@@ -186,7 +186,7 @@ def mock_json():
 
 def main(audio_urls=[]):
     # host = "ws://14.103.229.186:50004/ws"
-    host = "ws://localhost:50005/ws"
+    host = "ws://localhost:50004/ws"
     client = WebSocketClient(host)
     client.connect()
     while client.connected:
