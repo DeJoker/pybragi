@@ -104,6 +104,12 @@ def get_batch_items(
             items.append(item)
     return items
 
+#################################################################################
+
+def delete_items(table, condition):
+    collection = get_db()[table]
+    collection.delete_many(condition)
+
 
 def pretty_print(data):
     from pydantic import BaseModel

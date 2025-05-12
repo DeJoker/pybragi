@@ -124,7 +124,7 @@ def concurrent_make_http_request(url, method, headers, body, num, qps, verbose=F
     # If the first request's stats are crucial and distinct, manage latencySt_list accordingly.
     # For now, the first request's stats will be part of the overall analysis.
 
-    with ThreadPoolExecutor(max_workers=qps + 1 if qps > 0 else 1) as executor:
+    with ThreadPoolExecutor(max_workers=num+2) as executor:
         for _ in tqdm(range(num -1 if num > 0 else 0), "Sending requests"): # num-1 because one already sent
             executor.submit(make_http_request, url, method, headers, body, False, verbose)
             time.sleep(1/qps)

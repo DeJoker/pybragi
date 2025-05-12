@@ -1,4 +1,3 @@
-from pybragi.base import log
 import logging
 from pybragi.base.counter import RunningStatus
 from concurrent.futures import ThreadPoolExecutor
@@ -54,6 +53,16 @@ def prepare_jsons(args):
 
 
 def warmup(args, jsons):
+    if args.warmup_strategy == "none":
+        return
+    
+    if args.warmup_strategy == "count":
+        warmup_jsons = jsons[:args.warmup_count]
+    elif args.warmup_strategy == "prefill_history":
+        warmup_jsons = jsons
+    else:
+        warmup_jsons = jsons
+
     client = OpenAI(
         base_url=f"{args.url}/v1",
         api_key=args.api_key,
@@ -61,13 +70,17 @@ def warmup(args, jsons):
         timeout=60
     )
 
-    for item in tqdm.tqdm(jsons, "warmup"):
-        messages = json.loads(item["raw_prompt"])
-        no_last_message = messages[:-1] # for kv cache
+    for item in tqdm.tqdm(warmup_jsons, "warmup"):
+        messages = item.get("messages", [])
+        if not messages:
+            messages = json.loads(item["raw_prompt"])
+        
+        if args.warmup_strategy == "prefill_history":
+            messages = messages[:-1] # no_last_message   for kv cache
 
         completion = client.chat.completions.create(
             model=args.model,
-            messages=no_last_message,
+            messages=messages,
             temperature=0.8,
             top_p=0.8,
             max_tokens=1, # for kv cache
@@ -244,6 +257,8 @@ if __name__ == "__main__":
     parser.add_argument("--jsonl-file", type=str, default="")
     parser.add_argument("--num", type=int, default=0)
     parser.add_argument("--metrics-dir", type=str, default="")
+    parser.add_argument("--warmup-strategy", type=str, choices=["none", "prefill_history", "count"], default="prefill_history")
+    parser.add_argument("--warmup-count", type=int, default=0)
     args = parser.parse_args()
 
     if args.show_metrics_pkl:

@@ -14,7 +14,7 @@ Repository = "https://github.com/DeJoker/pybragi"
 
 [project]
 name = "pybragi"
-version = "0.0.14.post1"
+version = "0.0.14.post2"
 description = "pybragi is server framework"
 authors = [
     {name = "DeJoker", email = "localjie@163.com"},
@@ -35,7 +35,7 @@ dependencies = [
     "kafka-python>=2.0.2",
     "requests>=2.22.0",
     "prometheus_client>=0.14.1",
-    "numpy",
+    "numpy>=1.23.5",
     "uvicorn",
     "nvidia-ml-py",
     "readerwriterlock",

@@ -1,6 +1,7 @@
 import threading
 from contextlib import contextmanager
 from functools import wraps
+from pybragi.base import time_utils
 
 class RunningStatus:
     def __init__(self):
@@ -32,7 +33,6 @@ class RunningStatus:
 
 
 if __name__ == "__main__":
-    from pybragi.base import log
     import logging
     import time, sys
     import random

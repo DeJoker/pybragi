@@ -1,5 +1,4 @@
 
-from pybragi.base import log
 from contextlib import contextmanager
 from datetime import datetime
 import logging

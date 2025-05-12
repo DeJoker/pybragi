@@ -1,5 +1,5 @@
 import signal
-from pybragi.base import log
+
 import logging
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor

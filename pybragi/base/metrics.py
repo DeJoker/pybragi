@@ -156,9 +156,18 @@ class PrometheusMixIn(web.RequestHandler):
             return
         
         if len(self.request.body) < 500:
-            logging.info(f"{self.request.path} body: {self.request.body}")
+            try:
+                body_str = self.request.body.decode('utf-8')
+                logging.info(f"{self.request.path} body: {body_str}")
+            except UnicodeDecodeError:
+                logging.info(f"{self.request.path} body: {self.request.body}")
         elif self.request.headers.get('Content-Type') == "application/json":
-            body = json.loads(self.request.body)
+            try:
+                body_str = self.request.body.decode('utf-8')
+            except UnicodeDecodeError:
+                body_str = self.request.body
+            
+            body = json.loads(body_str)
             try:
                 logging.info(f"{self.request.path} part body: {kv_for_show(body)}")
             except Exception as e:

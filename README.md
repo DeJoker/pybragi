@@ -29,4 +29,23 @@ python -m pybragi.bench.llm_openai --show-metrics-pkl='/output/llm_openai_2025-0
 | 99分位 | 9312.820 | 270.640 | 6036.196 | 339.780 | 125.736 |
 | 最大值 | 9331.000 | 271.000 | 6069.074 | 340.317 | 127.126 |
 
+
+
+# server dao_server_discovery
+
+python -m pybragi.server.dao_server_discovery --mongo-url "mongodb://aa:bb@127.0.0.1:3717/?authSource=llm&retryWrites=true" --mongo-db=llm --action=show_type --model-type=openai
+
+# --mongo-db=llm --action=show --model-type=openai # openai同步流式调用
+
+# --mongo-db=llm --action=show_type_online # api+回调
+# --mongo-db=llm --action=show_type_online --model-type=openai # openai同步流式调用
+
+# --mongo-db=llm --action=show_type # api+回调
+# --mongo-db=llm --action=show_type --model-type=openai # openai同步流式调用
+
+# --mongo-db=llm --action=show_all_online # 完全所有
+# --mongo-db=llm --action=show_all # 完全所有
+
+
+
 ```

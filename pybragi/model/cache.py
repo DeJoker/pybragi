@@ -1,4 +1,5 @@
 
+from pybragi.base import time_utils
 from typing import Any
 from contextlib import contextmanager
 import heapq
@@ -7,7 +8,6 @@ import time
 
 import torch
 
-from pybragi.base import time_utils
 
 class ModelWrapper:
     def __init__(self, model: Any):
@@ -86,7 +86,6 @@ class LRUCacheModelQueue:
 
 
 if __name__ == "__main__":
-    from pybragi.base import log
     import logging
     cache = LRUCacheModelQueue(device="cpu", name="hubert", time_to_live=600, min_reverse_length=2)
     cache.add_model(torch.randn(1, 100))
