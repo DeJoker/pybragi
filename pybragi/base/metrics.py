@@ -206,7 +206,8 @@ class StreamMetrics:
         self.start = time.time()
         self.start_perf = time.perf_counter()
         self.last_token_time = 0
-        self.output_token_count = 0
+        self.prompt_tokens = 0
+        self.output_tokens = 0
         self.output_speed = 0
         self.infer_total = 0
 
@@ -218,26 +219,28 @@ class StreamMetrics:
     def output_token(self):
         current = time.perf_counter()
         
-        if self.output_token_count == 0:
+        if self.output_tokens == 0:
            self.ttft = current - self.start_perf
         else:
             if self.max_token_delta == float('inf'):
                 self.max_token_delta = current-self.last_token_time
             self.max_token_delta = max(self.max_token_delta, current-self.last_token_time)
-        self.output_token_count += 1
+        self.output_tokens += 1
         self.last_token_time = current
         self.infer_total = current-self.start_perf
         return
     
-    def finish_infer(self, token_len=0, backend: str = "openai"):
+    def finish_infer(self, output_tokens=0, prompt_tokens=0, backend: str = "openai"):
         current = time.perf_counter()
-        if token_len:
-            self.output_token_count = token_len
+        if output_tokens:
+            self.output_tokens = output_tokens
+        if prompt_tokens:
+            self.prompt_tokens = prompt_tokens
         
         self.infer_total = current-self.start_perf
-        if self.output_token_count > 0 and current > self.start_perf:
-            self.output_speed = self.output_token_count/(current-self.start_perf)
-            self.tpot = self.infer_total/self.output_token_count
+        if self.output_tokens > 0 and current > self.start_perf:
+            self.output_speed = self.output_tokens/(current-self.start_perf)
+            self.tpot = self.infer_total/self.output_tokens
 
         if self.ttft < float('inf'):
             self.delta_streaming = self.infer_total-self.ttft
@@ -255,7 +258,8 @@ class StreamMetrics:
         return {
             "request_id": self.request_id,
             "prompt_len": self.prompt_len,
-            "output_token_count": self.output_token_count,
+            "prompt_tokens": self.prompt_tokens,
+            "output_tokens": self.output_tokens,
             "produce_at": self.timestamp2,
             "infer_start_delta": self.start-self.timestamp2,
             "ttft": self.ttft,
@@ -269,7 +273,7 @@ class StreamMetrics:
 
     def __str__(self):
         # self.finish_infer()
-        str = f"request_id={self.request_id} prompt_len:{self.prompt_len} output_token_count:{self.output_token_count} produce_at:{self.timestamp2:.3f} " \
+        str = f"request_id={self.request_id} prompt_len:{self.prompt_len} prompt_tokens:{self.prompt_tokens} output_tokens:{self.output_tokens} produce_at:{self.timestamp2:.3f} " \
             f"infer_start_delta:{self.start-self.timestamp2:.3f} " \
             f"ttft:{self.ttft:.3f} tpot:{self.tpot:.3f} max_itl:{self.max_token_delta:.3f} speed:{self.output_speed:.3f} token/s " \
             f"infer_total:{self.infer_total:.3f} delta_streaming:{self.delta_streaming:.3f} from_request_total:{time.time()-self.timestamp2:.3f}"

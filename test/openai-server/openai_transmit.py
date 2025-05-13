@@ -8,7 +8,7 @@ class ConfigOnline(object):
     OpenAIPort = 19000
     MaxRunningCount = 50
     Backend = "sglang-openai"
-    ApiKey = "zy-8QneTmyQ4jAJCwnvjCueQRkRP8StacrBzrvb"
+    ApiKey = "zy-C49X29cophDG5y3UQTeXElwik4dF2ETUCwHv"
 
 
 Config = ConfigOnline
