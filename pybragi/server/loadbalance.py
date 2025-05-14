@@ -3,9 +3,14 @@ import requests
 import traceback
 import logging
 
+from pybragi.version import __version__
 from pybragi.base import hash
 from pybragi.server import dao_server_discovery
 
+
+health_api_path = "/healthcheck"
+if __version__ >= "0.0.15":
+    health_api_path = "/health"
 
 class LoadBalanceStatus:
     roundrobin_cnt = 0
@@ -13,25 +18,24 @@ class LoadBalanceStatus:
     hash_balance_cnt = 0
 
 
-
-def roundrobin(servers) -> str:
+def roundrobin(servers, api_path: str = health_api_path) -> str:
     for _ in range(len(servers)):
         server = servers[LoadBalanceStatus.roundrobin_cnt % len(servers)]
         LoadBalanceStatus.roundrobin_cnt += 1
         host = f"http://{server['ipv4']}:{server['port']}"
         try:
-            resp = requests.get(f"{host}/healthcheck", timeout=0.1)
+            resp = requests.get(f"{host}{api_path}", timeout=0.1)
             if resp.ok:
                 return host
         except Exception as e:
             traceback.print_exc()
             dao_server_discovery.unregister_server(server['ipv4'], server['port'], server['name'], status="offline_unhealthy", type=server['type'])
-            logging.error(f"healthcheck failed, unregister server: {server['ipv4']}:{server['port']}")
+            logging.error(f"{api_path} failed, unregister server: {server['ipv4']}:{server['port']}")
             continue
     raise Exception("No healthy server found")
 
 
-def weighted_roundrobin(servers) -> str:
+def weighted_roundrobin(servers, api_path: str = health_api_path) -> str:
     """加权轮询负载均衡算法"""
     weights = []
     total_weight = 0
@@ -43,7 +47,7 @@ def weighted_roundrobin(servers) -> str:
         total_weight += weight
     
     if total_weight == 0:
-        return roundrobin(servers)
+        return roundrobin(servers, api_path)
     
     for _ in range(len(servers)):
         pos = LoadBalanceStatus.weighted_roundrobin_cnt % total_weight
@@ -57,19 +61,19 @@ def weighted_roundrobin(servers) -> str:
         
         host = f"http://{server['ipv4']}:{server['port']}"
         try:
-            resp = requests.get(f"{host}/healthcheck", timeout=0.1)
+            resp = requests.get(f"{host}{api_path}", timeout=0.1)
             if resp.ok:
                 return host
         except Exception as e:
             traceback.print_exc()
             dao_server_discovery.unregister_server(server['ipv4'], server['port'], server['name'], status="offline_unhealthy", type=server['type'])
-            logging.error(f"healthcheck failed, unregister server: {server['ipv4']}:{server['port']}")
+            logging.error(f"{api_path} failed, unregister server: {server['ipv4']}:{server['port']}")
             continue
     
     raise Exception("No healthy server found")
 
 
-def hash_balance(servers: list, key: str) -> str:
+def hash_balance(servers: list, key: str, api_path: str = health_api_path) -> str:
     """哈希负载均衡算法"""
     if not servers:
         raise Exception("No servers available")
@@ -83,7 +87,7 @@ def hash_balance(servers: list, key: str) -> str:
         server = servers[idx]
         host = f"http://{server['ipv4']}:{server['port']}"
         try:
-            resp = requests.get(f"{host}/healthcheck", timeout=0.1)
+            resp = requests.get(f"{host}{api_path}", timeout=0.1)
             if resp.ok:
                 LoadBalanceStatus.hash_balance_cnt += 1
                 return host
@@ -91,7 +95,7 @@ def hash_balance(servers: list, key: str) -> str:
             traceback.print_exc()
             dao_server_discovery.unregister_server(server['ipv4'], server['port'], server['name'], status="offline_unhealthy", type=server['type'])
             servers = servers[1:] # remove the unhealthy server
-            logging.error(f"healthcheck failed, unregister server: {server['ipv4']}:{server['port']}")
+            logging.error(f"{api_path} failed, unregister server: {server['ipv4']}:{server['port']}")
             continue
         retry_cnt += 1
     

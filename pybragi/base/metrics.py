@@ -149,7 +149,7 @@ def kv_for_show(body: dict):
     return ret
 
 
-pass_path = ["/healthcheck", "/metrics"]
+pass_path = ["/healthcheck", "/health", "/metrics"]
 class PrometheusMixIn(web.RequestHandler):
     def prepare(self):
         if self.request.method != "POST":

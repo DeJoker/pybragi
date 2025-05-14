@@ -88,6 +88,9 @@ def run_tornado_app(app: web.Application, port=8888):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     app.listen(port)
+    from pybragi.base import ps
+    ipv4 = ps.get_ipv4()
+    logging.info(f"Tornado app started on port http://{ipv4}:{port}")
     ioloop.IOLoop.current().start()
 
 

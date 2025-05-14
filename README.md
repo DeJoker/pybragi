@@ -10,6 +10,16 @@
 
 
 ## commandline
+
+```bash
+# simple server
+python -m pybragi.base.base_handler --port=1122      
+
+# system info     eth0 ipv4/disk/memory/gpu
+python -m pybragi.base.ps
+
+```
+
 ```bash
 # http prof
 python -m pybragi.bench.http_prof --url http://10.121.0.11:18000/healthcheck --num=100 --qps=40

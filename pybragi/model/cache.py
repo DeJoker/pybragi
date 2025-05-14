@@ -6,9 +6,6 @@ import heapq
 from threading import Lock, Thread
 import time
 
-import torch
-
-
 class ModelWrapper:
     def __init__(self, model: Any):
         self.model = model
@@ -87,6 +84,7 @@ class LRUCacheModelQueue:
 
 if __name__ == "__main__":
     import logging
+    import torch
     cache = LRUCacheModelQueue(device="cpu", name="hubert", time_to_live=600, min_reverse_length=2)
     cache.add_model(torch.randn(1, 100))
     with cache.get_model() as model:
