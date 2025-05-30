@@ -12,7 +12,7 @@ last_log_file = ""
 # not strict threading lock, but it's ok for static log_dir
 
 @time_utils.elapsed_time_limit(0.05) # about 50ms to nas
-def log_request_to_file(name, request_json, log_dir="/cano_nas01/cyj/request", max_lines=500):
+def log_request_to_file(name, request_json, log_dir="/cano_nas01/cyj/request", max_lines=1e6):
     global total_log_count, last_log_file
     try:
         if name not in log_dir:
@@ -30,9 +30,11 @@ def log_request_to_file(name, request_json, log_dir="/cano_nas01/cyj/request", m
         with open(filepath, 'a+') as f:
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
             try:
-                f.seek(0)
                 # ensure global variables update in filelock
-                total_log_count = sum(1 for _ in f)
+                # f.seek(0)
+                # total_log_count = sum(1 for _ in f) # accurate but slow
+
+                total_log_count += 1 # only calculate self-increment
                 last_log_file = filepath
 
                 f.seek(0, 2)  # move to end
