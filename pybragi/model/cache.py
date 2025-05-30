@@ -56,8 +56,16 @@ class LRUCacheModelQueue:
                 # wrapper.model.to("cpu")
                 wrapper.last_used = time.time()
                 heapq.heappush(self.heap, wrapper)
-
-
+    
+    def hold_model(self):
+        with self.lock, time_utils.ElapseCtx("hold_model", gt=0.01):
+            if not self.heap:
+                # todo: add model
+                raise TimeoutError(f"{self.name} No models available")
+            wrapper = heapq.heappop(self.heap)
+        
+        return wrapper.model
+    
     def _cleanup_loop(self):
         while True:
             time.sleep(1)

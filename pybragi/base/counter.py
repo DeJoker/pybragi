@@ -6,8 +6,9 @@ from pybragi.base import time_utils
 class RunningStatus:
     def __init__(self):
         self.running_count = 0
-        self.lock = threading.Lock()
+        self.lock = threading.RLock() # 可重入
 
+    #  运行一段时间后出现 count 只增不减  -1 没有正确调用
     @contextmanager
     def mark_running(self):
         with self.lock:
@@ -45,7 +46,12 @@ if __name__ == "__main__":
     @running_status.running_decorator
     def test_running_status():
         logging.info("running")
-        time.sleep(random.randint(0, 10) / 10)
+        rand = random.randint(0, 10) 
+        time.sleep(rand / 10)
+        if rand > 8:
+            logging.info(f"rand > 8: {rand}")
+            raise Exception("rand > 8")
+        
 
     executor = ThreadPoolExecutor(max_workers=11)
     for _ in range(10):
@@ -53,7 +59,7 @@ if __name__ == "__main__":
 
     def continue_running():
         for _ in range(20):
-            logging.info(f"running_count: {running_status.running_count}")
+            logging.info(f"running_count: {running_status.get_running_count()}")
             time.sleep(0.1)
     
     executor.submit(continue_running)

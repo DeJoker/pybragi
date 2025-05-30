@@ -14,9 +14,9 @@ bucket = "rvc"
 
 @time_utils.elapsed_time_limit(0.05)
 def upload_rvc(bytes: BytesIO, request_id: str):
-    client = tos.TosClientV2(os.getenv('TOS_ACCESS_KEY'), os.getenv('TOS_SECRET_KEY'), internal_endpoint, region)
+    client = tos.TosClientV2(os.getenv('TOS_ACCESS_KEY', ''), os.getenv('TOS_SECRET_KEY', ''), internal_endpoint, region)
 
-    tos_path = f'audio/{request_id[:4]}/{request_id}.wav'
+    tos_path = f'audio/{request_id[-4:]}/{request_id}.wav'
     try:
         resp = client.put_object(bucket, tos_path, content=bytes, 
                         content_type='audio/x-wav', forbid_overwrite=False
@@ -33,7 +33,7 @@ def upload_rvc(bytes: BytesIO, request_id: str):
 def upload_rvc_with_sts(bytes: BytesIO, request_id: str, ak: str, sk: str, stToken: str):
     client = tos.TosClientV2(ak, sk, external_endpoint, region, security_token=stToken)
 
-    tos_path = f'audio/{request_id[:4]}/{request_id}.wav'
+    tos_path = f'audio/{request_id[-4:]}/{request_id}.wav'
     try:
         resp = client.put_object(bucket, tos_path, content=bytes, 
                         content_type='audio/x-wav', forbid_overwrite=False

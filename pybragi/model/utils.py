@@ -5,7 +5,6 @@ import json
 import logging
 from typing import OrderedDict
 
-from safetensors import safe_open
 
 
 import shutil
@@ -207,6 +206,8 @@ def dicts_parameters(dicts: OrderedDict, show_info=False):
     return total
 
 def open_safetensor(model_file=""):
+    from safetensors import safe_open
+    
     tensors = {}
     with safe_open(model_file, framework="pt", device='cpu') as f:
         for k in f.keys():

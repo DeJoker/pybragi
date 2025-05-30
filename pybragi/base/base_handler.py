@@ -61,10 +61,18 @@ class HealthCheckHandler(metrics.PrometheusMixIn):
         self.write(res)
 
 class CORSBaseHandler(web.RequestHandler):
+    origin="*"
+    headers="x-requested-with, content-type, authorization, x-user-id, x-token"
+    methods="GET, POST, PUT, DELETE, OPTIONS"
+    
+    def initialize(self, *args, **kwargs):
+        logging.info(f"initialize: {args} {kwargs}, this after set_default_headers so not work")
+
+    # set_default_headers 在 initialize 之前调用
     def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Origin", "*")
-        self.set_header("Access-Control-Allow-Headers", "x-requested-with, content-type, authorization")
-        self.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        self.set_header("Access-Control-Allow-Origin", self.origin)
+        self.set_header("Access-Control-Allow-Headers", self.headers)
+        self.set_header("Access-Control-Allow-Methods", self.methods)
         
     def options(self, *args, **kwargs):
         self.set_status(204)
@@ -88,6 +96,7 @@ def run_tornado_app(app: web.Application, port=8888):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     app.listen(port)
+
     from pybragi.base import ps
     ipv4 = ps.get_ipv4()
     logging.info(f"Tornado app started on port http://{ipv4}:{port}")
@@ -101,15 +110,28 @@ def base_handle_exit_signal(signum, frame):
 
 
 
-# python -m service.base.base_handler
+# python -m service.base.base_handler --origin="127.0.0.1"
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8888)
+    parser.add_argument("--origin", type=str, default="*")
     args = parser.parse_args()
-    
+
     signal.signal(signal.SIGINT, base_handle_exit_signal)
     signal.signal(signal.SIGTERM, base_handle_exit_signal)
+
+    class RootHandler(CORSBaseHandler):
+        def get(self):
+            self.write("hello world")
+
+    CORSBaseHandler.origin = args.origin # 这里可以修改 origin
+
     app = make_tornado_web(__file__)
+    app.add_handlers(".*$",
+    [
+        (r"/", RootHandler, dict(methods="GET")), # 在这里 init 不生效  可以 curl 请求发现
+    ])
+
     run_tornado_app(app, args.port)
 

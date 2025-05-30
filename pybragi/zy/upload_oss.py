@@ -22,7 +22,7 @@ def upload_wanxiang(file_path, filename=''):
     auth = oss2.Auth(os.getenv("model_platform_ak", ""), os.getenv("model_platform_as", ""))
     bucket = oss2.Bucket(auth, internal_endpoint, bucket_name)
 
-    oss_path = 'aigc/wanxiang/'+filename
+    oss_path = f'aigc/wanxiang/{filename[-4:]}/{filename}'
     exist = bucket.object_exists(oss_path)
     if exist:
         logging.info(f'{oss_path} exist')
@@ -39,7 +39,7 @@ def upload_rvc(bytes: BytesIO, request_id: str):
     auth = oss2.Auth(os.getenv("model_platform_ak", ""), os.getenv("model_platform_as", ""))
     bucket = oss2.Bucket(auth, internal_endpoint, bucket_name)
 
-    oss_path = f'aigc/rvc/{request_id}.wav'
+    oss_path = f'aigc/rvc/{request_id[-4:]}/{request_id}.wav'
     resp = bucket.put_object(oss_path, bytes)
     logging.info(f'upload to infer_engine/class/{oss_path}')
     resp_info = ", ".join("%s: %s" % item for item in vars(resp).items())
