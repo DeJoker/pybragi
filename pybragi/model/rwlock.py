@@ -11,7 +11,8 @@ global_lock_dict = {}
 
 def init_rwlock(model_name: str):
     global global_lock_dict
-    global_lock_dict[model_name] = rwlock.RWLockFair()
+    if model_name not in global_lock_dict:
+        global_lock_dict[model_name] = rwlock.RWLockFair()
     # 不要缓存 gen_rlock() 和 gen_wlock() 否则会创建多个锁访问器
     # 每个锁访问器内部存储了自己的锁定状态 v_locked，而不是从底层锁对象查询状态
 

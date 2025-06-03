@@ -1,13 +1,13 @@
-import signal
+import os, signal
 
 import logging
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
+from typing import Callable, Optional
 from tornado import web, gen, ioloop
 from tornado.concurrent import run_on_executor
 
 import asyncio
-from datetime import datetime
 from pybragi.base import metrics
 
 
@@ -102,24 +102,48 @@ def run_tornado_app(app: web.Application, port=8888):
     logging.info(f"Tornado app started on port http://{ipv4}:{port}")
     ioloop.IOLoop.current().start()
 
-
-def base_handle_exit_signal(signum, frame):
+# 1. 无法退出可能是启动的 threading join.  失效其中一个原因是   使用了 finally: continue  否则线程无法退出
+def handle_exit_signal(signum, frame, func: Optional[Callable], timeout: int):
     logging.info("Received exit signal. Setting exit event.")
     tornado_ioloop = ioloop.IOLoop.current()
+    tornado_ioloop.stop() # 退出web server线程
+    if func:
+        func()
+    
+    def timeout_exit(timeout: int):
+        import time
+        # global_exit_event().set()  # 再用信号退出消费线程
+
+        for _ in range(int(timeout)):
+            time.sleep(1)
+
+        logging.info(f"timeout {timeout} force exit")
+        os._exit(1)
+    
+    import threading
+    threading.Thread(target=timeout_exit, args=(timeout,), daemon=True).start()
+
     tornado_ioloop.add_callback_from_signal(tornado_ioloop.stop)
 
+def register_exit_signal(func: Optional[Callable] = None, timeout: int = 10):
+    signal.signal(signal.SIGINT, lambda signum, frame: handle_exit_signal(signum, frame, func, timeout))
+    signal.signal(signal.SIGTERM, lambda signum, frame: handle_exit_signal(signum, frame, func, timeout))
 
 
 # python -m service.base.base_handler --origin="127.0.0.1"
 if __name__ == "__main__":
+    from functools import partial
     import argparse
+    
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8888)
     parser.add_argument("--origin", type=str, default="*")
     args = parser.parse_args()
 
-    signal.signal(signal.SIGINT, base_handle_exit_signal)
-    signal.signal(signal.SIGTERM, base_handle_exit_signal)
+
+    def exit_func(start_time: datetime):
+        logging.info(f"exit_func, start_time: {start_time}, duration: {datetime.now() - start_time}")
+    register_exit_signal(partial(exit_func, datetime.now()))
 
     class RootHandler(CORSBaseHandler):
         def get(self):

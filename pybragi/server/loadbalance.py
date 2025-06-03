@@ -8,14 +8,21 @@ from pybragi.base import hash
 from pybragi.server import dao_server_discovery
 
 
-health_api_path = "/healthcheck"
-if __version__ >= "0.0.15":
-    health_api_path = "/health"
+health_api_path = "/health"
 
 class LoadBalanceStatus:
     roundrobin_cnt = 0
     weighted_roundrobin_cnt = 0
     hash_balance_cnt = 0
+    boardcast_cnt = 0
+
+
+def boardcast(servers) -> list:
+    hosts = []
+    for server in servers:
+        hosts.append(f"http://{server['ipv4']}:{server['port']}")
+    LoadBalanceStatus.boardcast_cnt += 1
+    return hosts
 
 
 def roundrobin(servers, api_path: str = health_api_path) -> str:
