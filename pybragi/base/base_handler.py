@@ -66,7 +66,8 @@ class CORSBaseHandler(web.RequestHandler):
     methods="GET, POST, PUT, DELETE, OPTIONS"
     
     def initialize(self, *args, **kwargs):
-        logging.info(f"initialize: {args} {kwargs}, this after set_default_headers so not work")
+        # logging.info(f"initialize: {args} {kwargs}, this after set_default_headers so not work")
+        super().initialize(*args, **kwargs)
 
     # set_default_headers 在 initialize 之前调用
     def set_default_headers(self):
