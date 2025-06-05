@@ -8,6 +8,8 @@ from tornado import web
 from tornado.concurrent import run_on_executor
 from concurrent.futures import ThreadPoolExecutor
 
+from pybragi.base.species_queue import global_exit_event
+global_exit_event()
 
 class MetricsManager:
     latency_buckets = (
@@ -152,10 +154,15 @@ def kv_for_show(body: dict):
 pass_path = ["/healthcheck", "/health", "/metrics"]
 class PrometheusMixIn(web.RequestHandler):
     def prepare(self):
+        if global_exit_event().is_set():
+            self.set_status(503)
+            self.write("Service is shutting down")
+            return
+
         if self.request.method != "POST":
             return
         
-        if len(self.request.body) < 500:
+        if len(self.request.body) < 1000:
             try:
                 body_str = self.request.body.decode('utf-8')
                 logging.info(f"{self.request.path} body: {body_str}")

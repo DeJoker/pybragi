@@ -86,15 +86,6 @@ class BatchQueue:
         return size
 
 
-# def set_global_batch_queue(task_queue :BatchQueue):
-#     global g_batch_queue
-#     g_batch_queue = task_queue
-
-# def global_batch_queue():
-#     global g_batch_queue
-#     return g_batch_queue
-
-
 # 初始化&get方法二合一
 g_batch_queue :BatchQueue
 def global_batch_queue(task_queue :Optional[BatchQueue] = None):

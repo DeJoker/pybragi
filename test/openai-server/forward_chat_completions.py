@@ -36,7 +36,6 @@ class ChatCompletions(PrometheusMixIn):
     def initialize(self):
         self.ioloop = ioloop.IOLoop.current()
         self.client_disconnected = False
-        self.request.connection.set_close_callback(self.on_connection_close)
     
     def fetch_openai_stream(self, host, **kwargs):
         client = OpenAI(

@@ -8,7 +8,7 @@ class TailNLog():
         self.tail = tail
         self.total_lines = total_lines
         self.current_pos = None
-        self.io = None
+        self.io: BufferedReader = None
         self.stop_reading = False
         self.last_data = ""
 

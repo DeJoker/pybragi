@@ -1,10 +1,10 @@
-from pybragi.base import log
+from pybragi.base import time_utils
 import logging
 import time
 from openai import OpenAI
 
-# url = "http://14.103.229.186:50001"
-url = "http://llm-gateway.character.xunlei.com"
+# url = "http://llm-gateway.character.xunlei.com"
+url = "http://127.0.0.1:8888"
 
 client = OpenAI(
     base_url=f"{url}/v1",
@@ -18,7 +18,7 @@ res = client.models.list()
 logging.info(res)
 
 completion = client.chat.completions.create(
-  model="qwen2572_short_text2",
+  model="qwen3_235b_cpt_0419_25k_2",
   messages=[
     {"role": "user", "content": "你是谁啊"}
   ],
@@ -28,7 +28,7 @@ completion = client.chat.completions.create(
   max_tokens=512,
   extra_body={
     "repetition_penalty": 1.05,
-    "min_tokens": 10,
+    "min_tokens": 100,
     "top_k": 10,
     "mid": 135201,
     "timstamp": int(time.time()),
@@ -37,7 +37,7 @@ completion = client.chat.completions.create(
   stream=True,
 )
 
-trim_cnt = 10
+trim_cnt = 1000
 for chunk in completion:
     if chunk.choices[0].delta.content:
         logging.info(chunk.choices[0].delta.content)

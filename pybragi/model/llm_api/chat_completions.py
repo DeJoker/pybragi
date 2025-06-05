@@ -13,11 +13,8 @@ from pybragi.base.metrics import PrometheusMixIn
 
 from pybragi.base.metrics import StreamMetrics
 
-from .openai_transmit import Config
-
-        
 class ChatCompletions(PrometheusMixIn):
-    executor = ThreadPoolExecutor(Config.MaxRunningCount+2)
+    executor: ThreadPoolExecutor
 
     # not emit this event
     def on_connection_close(self):
@@ -26,15 +23,18 @@ class ChatCompletions(PrometheusMixIn):
         logging.info("Client disconnected, stopping stream")
         super().on_connection_close()
 
-    def initialize(self):
+    def initialize(self, base_url: str, api_key: str, backend: str = "sglang_openai", max_running_count: int = 10):
         self.ioloop = ioloop.IOLoop.current()
         self.client_disconnected = False
-        self.request.connection.set_close_callback(self.on_connection_close)
+        self.base_url = base_url
+        self.api_key = api_key
+        self.backend = backend
+        self.max_running_count = max_running_count
     
     def fetch_openai_stream(self, **kwargs):
         client = OpenAI(
-            base_url=f"http://localhost:{Config.OpenAIPort}/v1",
-            api_key="xxx",
+            base_url=self.base_url,
+            api_key=self.api_key,
             max_retries=1,
         )
         return client.chat.completions.create(
@@ -118,7 +118,7 @@ class ChatCompletions(PrometheusMixIn):
                     prompt_tokens = chunk.usage.prompt_tokens
                 if chunk.usage.completion_tokens:
                     completion_tokens = chunk.usage.completion_tokens
-                metrics.finish_infer(output_tokens=completion_tokens, prompt_tokens=prompt_tokens, backend=Config.Backend)
+                metrics.finish_infer(output_tokens=completion_tokens, prompt_tokens=prompt_tokens, backend=self.backend)
             else:
                 metrics.finish_infer(0, 0)
                 
@@ -129,3 +129,6 @@ class ChatCompletions(PrometheusMixIn):
         return
 
 
+
+def init_executor(max_workers: int):
+    ChatCompletions.executor = ThreadPoolExecutor(max_workers=max_workers)
