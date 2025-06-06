@@ -122,6 +122,7 @@ def handle_exit_signal(signum, frame, func: Optional[Callable], timeout: int):
 
     tornado_ioloop = ioloop.IOLoop.current()
     loop = asyncio.get_event_loop()
+    # wait for all reply to client
     loop.call_later(1.0, tornado_ioloop.stop)
 
 def register_exit_signal(func: Optional[Callable] = None, timeout: int = 10):
