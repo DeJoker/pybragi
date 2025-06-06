@@ -1,5 +1,10 @@
+import asyncio
+from tornado import ioloop
+import logging
+import time
 from pybragi.model.llm_api import chat_completions, models
 from pybragi.base.base_handler import make_tornado_web, run_tornado_app, register_exit_signal
+from pybragi.base.species_queue import global_exit_event
 
 def get_models():
     return [
@@ -16,7 +21,21 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     chat_completions.init_executor(10)
-    register_exit_signal()
+
+    loop = asyncio.get_event_loop()
+    tornado_ioloop = ioloop.IOLoop.current()
+    def exit_handler(signum):
+        logging.info("exit_handler start")
+        global_exit_event().set() # 1. reject all incoming requests
+        chat_completions.ChatCompletions.executor.shutdown() # 2. shutdown executor
+        time.sleep(0.5) # 3. wait for all requests reply to client
+        loop.stop()
+        loop.add_signal_handler(signum, tornado_ioloop.stop) # RuntimeError: set_wakeup_fd only works in main thread of the main interpreter
+        
+
+        logging.info("exit_handler done")
+
+    register_exit_signal(exit_handler)
 
     app = make_tornado_web("openai-transmit")
     app.add_handlers(".*", [

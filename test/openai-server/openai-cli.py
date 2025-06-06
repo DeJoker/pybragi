@@ -1,7 +1,10 @@
-from pybragi.base import time_utils
+import os, signal
+from pybragi.base import process_utils
 import logging
 import time
 from openai import OpenAI
+
+
 
 # url = "http://llm-gateway.character.xunlei.com"
 url = "http://127.0.0.1:8888"
@@ -37,11 +40,17 @@ completion = client.chat.completions.create(
   stream=True,
 )
 
+pid = process_utils.port_to_pid(8888)
+
 trim_cnt = 1000
 for chunk in completion:
     if chunk.choices[0].delta.content:
         logging.info(chunk.choices[0].delta.content)
         trim_cnt -= 1
+        if trim_cnt == 950:
+            if pid > 0:
+                os.kill(pid, signal.SIGINT)
+                logging.info(f"kill pid:{pid}")
         if trim_cnt <= 0:
             break
 completion.close()
