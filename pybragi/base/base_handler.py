@@ -1,4 +1,5 @@
 import os, signal
+import time
 
 import logging
 from datetime import datetime
@@ -106,13 +107,10 @@ def run_tornado_app(app: web.Application, port=8888):
 # 1. 无法退出可能是启动的 threading join.  失效其中一个原因是   使用了 finally: continue  否则线程无法退出
 def handle_exit_signal(signum, frame, func: Optional[Callable], timeout: int):
     logging.info("Received exit signal. Setting exit event.")
-    loop = asyncio.get_event_loop()
     if func:
-        loop.add_signal_handler(signum, func)
-    
-    def timeout_exit(timeout: int):
-        import time
+        func()
 
+    def timeout_exit(timeout: int):
         for _ in range(int(timeout)):
             time.sleep(1)
 
@@ -122,9 +120,9 @@ def handle_exit_signal(signum, frame, func: Optional[Callable], timeout: int):
     import threading
     threading.Thread(target=timeout_exit, args=(timeout,), daemon=True).start()
 
-    logging.info(f"add signal handler {signum} {func}")
-    loop.add_signal_handler(signum, loop.stop)
-    logging.info(f"done")
+    tornado_ioloop = ioloop.IOLoop.current()
+    loop = asyncio.get_event_loop()
+    loop.call_later(1.0, tornado_ioloop.stop)
 
 def register_exit_signal(func: Optional[Callable] = None, timeout: int = 10):
     signal.signal(signal.SIGINT, lambda signum, frame: handle_exit_signal(signum, frame, func, timeout))
