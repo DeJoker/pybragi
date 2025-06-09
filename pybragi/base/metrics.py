@@ -3,6 +3,7 @@
 import json
 import logging
 import time
+import weakref
 import prometheus_client as pc
 from tornado import web
 from tornado.concurrent import run_on_executor
@@ -131,6 +132,7 @@ def register_metrics(manager: MetricsManager):
     metrics_manager = manager
 
 
+
 class MetricsHandler(web.RequestHandler):
     executor = ThreadPoolExecutor(1)
     def _log(self):
@@ -152,12 +154,18 @@ def kv_for_show(body: dict):
     return ret
 
 
+active_handlers = weakref.WeakSet()
+
+
 pass_path = ["/healthcheck", "/health", "/metrics"]
 class PrometheusMixIn(web.RequestHandler):
-    def prepare(self):
+    async def prepare(self):
+        active_handlers.add(self)
+
         if global_exit_event().is_set():
             self.set_status(503)
             self.write("Service is shutting down")
+            self.finish() # 没有显示调用 tornado 会继续执行 get/post 方法
             return
 
         if self.request.method != "POST":
@@ -182,6 +190,9 @@ class PrometheusMixIn(web.RequestHandler):
                 pass
 
     def on_finish(self):
+        if self in active_handlers:
+            active_handlers.remove(self)
+
         path = self.request.path
         method = self.request.method
         request_time = self.request.request_time()

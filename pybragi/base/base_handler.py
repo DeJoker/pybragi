@@ -1,12 +1,9 @@
 import os, signal
-import time
 
 import logging
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Optional
 from tornado import web, gen, ioloop
-from tornado.concurrent import run_on_executor
 
 import asyncio
 from pybragi.base import metrics
@@ -132,13 +129,23 @@ if __name__ == "__main__":
 
     async def exit_func(start_time: datetime):
         global_exit_event().set()
-        logging.info(f"exit_func, start_time: {start_time}, duration: {datetime.now() - start_time}")
+        while metrics.active_handlers:
+            logging.info(f"active_handlers: {len(metrics.active_handlers)}")
+            for handler in metrics.active_handlers:
+                logging.info(f"handler: {handler}")
+            await asyncio.sleep(0.5)
+        
+        logging.info(f"server start_time: {start_time}, duration: {datetime.now() - start_time}")
         ioloop.IOLoop.current().stop()
     
     register_exit_handler(partial(exit_func, datetime.now()))
 
-    class RootHandler(CORSBaseHandler):
-        def get(self):
+    class RootHandler(CORSBaseHandler, metrics.PrometheusMixIn):
+        async def get(self):
+            self.write("hello world")
+        
+        async def post(self):
+            await asyncio.sleep(10)
             self.write("hello world")
 
     CORSBaseHandler.origin = args.origin # 这里可以修改 origin
