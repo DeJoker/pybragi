@@ -14,12 +14,13 @@ global_exit_event()
 class MetricsManager:
     latency_buckets = (
         [round(0.025*i, 3) for i in range(40)] +
-        [round(0.1*i, 3) for i in range(10, 51)]
+        [round(0.1*i, 3) for i in range(10, 30)]
     )
     big_latency_buckets = (
         latency_buckets + 
-        [2*i for i in range(3, 16)] +
-        [3*i for i in range(11, 20)]
+        [i for i in range(3, 10)] +
+        [2*i for i in range(5, 15)] +
+        [3*i for i in range(10, 21)]
     )
 
     speed_buects = (
@@ -302,9 +303,9 @@ if __name__ == "__main__":
 
     test_metrics()
 
-    # print(MetricsManager.latency_buckets)
-    # print(MetricsManager.big_latency_buckets)
-    # test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=MetricsManager.big_latency_buckets)
+    print(MetricsManager.latency_buckets)
+    print(MetricsManager.big_latency_buckets)
+    test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=MetricsManager.big_latency_buckets)
     # test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=[0,1,1.1,1]) # Buckets not in sorted order
     # test_for_valid_bucket = pc.Histogram("test", "xxx", ["hhh"], buckets=[0,1,1]) # Duplicated timeseries in CollectorRegistry
     print("end")

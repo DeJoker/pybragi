@@ -25,6 +25,16 @@ class RunningStatus:
                 self.running_count -= 1
                 self.active_tasks.remove(tracking_id)
     
+    def run(self, tracking_id=""):
+        with self.lock:
+            self.running_count += 1
+            self.active_tasks.append(tracking_id)
+    
+    def finish(self, tracking_id=""):
+        with self.lock:
+            self.running_count -= 1
+            self.active_tasks.remove(tracking_id)
+
     def get_running_count(self):
         with self.lock:
             return self.running_count

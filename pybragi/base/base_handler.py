@@ -23,8 +23,6 @@ class Echo(metrics.PrometheusMixIn):
 
 
 class HealthCheckHandler(metrics.PrometheusMixIn):
-    executor = ThreadPoolExecutor(2)
-
     # https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.initialize
     def initialize(self, name=""):
         self.name = name
@@ -51,13 +49,11 @@ class HealthCheckHandler(metrics.PrometheusMixIn):
         }
         return res
 
-    @run_on_executor
-    def get(self):
+    async def get(self):
         res = self.current()
         self.write(res)
 
-    @run_on_executor
-    def post(self):
+    async def post(self):
         res = self.current()
         self.write(res)
 
@@ -66,11 +62,7 @@ class CORSBaseHandler(web.RequestHandler):
     headers="x-requested-with, content-type, authorization, x-user-id, x-token"
     methods="GET, POST, PUT, DELETE, OPTIONS"
     
-    def initialize(self, *args, **kwargs):
-        # logging.info(f"initialize: {args} {kwargs}, this after set_default_headers so not work")
-        super().initialize(*args, **kwargs)
-
-    # set_default_headers 在 initialize 之前调用
+    # set_default_headers -> initialize -> prepare # set_default_headers 在 initialize 之前调用
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", self.origin)
         self.set_header("Access-Control-Allow-Headers", self.headers)
@@ -154,7 +146,7 @@ if __name__ == "__main__":
     app = make_tornado_web(__file__)
     app.add_handlers(".*$",
     [
-        (r"/", RootHandler, dict(methods="GET")), # 在这里 init 不生效  可以 curl 请求发现
+        (r"/", RootHandler),
     ])
 
     run_tornado_app(app, args.port)
