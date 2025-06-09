@@ -95,8 +95,9 @@ def make_tornado_web(service: str, big_latency=False, kafka=False):
     return app
 
 def run_tornado_app(app: web.Application, port=8888):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    # loop = asyncio.new_event_loop()
+    # asyncio.set_event_loop(loop)
+    asyncio.get_event_loop()
     app.listen(port)
 
     from pybragi.base import ps
@@ -109,7 +110,7 @@ def run_tornado_app(app: web.Application, port=8888):
 def handle_exit_signal(signum, frame, func: Optional[Callable], timeout: int):
     logging.info("Received exit signal. Setting exit event.")
     loop = asyncio.get_event_loop()
-    
+
     async def timeout_exit(timeout: int):
         await asyncio.sleep(timeout)
         logging.info(f"timeout {timeout} force exit")
@@ -121,7 +122,7 @@ def handle_exit_signal(signum, frame, func: Optional[Callable], timeout: int):
     loop.call_soon_threadsafe(loop.create_task, timeout_exit(timeout))
 
 
-def register_exit_signal(func: Optional[Callable] = None, timeout: int = 10):
+def register_exit_handler(func: Optional[Callable] = None, timeout: int = 10):
     signal.signal(signal.SIGINT, lambda signum, frame: handle_exit_signal(signum, frame, func, timeout))
     signal.signal(signal.SIGTERM, lambda signum, frame: handle_exit_signal(signum, frame, func, timeout))
 
@@ -137,10 +138,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
 
-    def exit_func(start_time: datetime):
+    async def exit_func(start_time: datetime):
         global_exit_event().set()
         logging.info(f"exit_func, start_time: {start_time}, duration: {datetime.now() - start_time}")
-    register_exit_signal(partial(exit_func, datetime.now()))
+        ioloop.IOLoop.current().stop()
+    
+    register_exit_handler(partial(exit_func, datetime.now()))
 
     class RootHandler(CORSBaseHandler):
         def get(self):

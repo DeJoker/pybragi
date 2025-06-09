@@ -25,15 +25,16 @@ def boardcast(servers) -> list:
     return hosts
 
 
-def roundrobin(servers, api_path: str = health_api_path) -> str:
+def roundrobin(servers, api_path: str = health_api_path, use_http: bool = True) -> str:
     for _ in range(len(servers)):
         server = servers[LoadBalanceStatus.roundrobin_cnt % len(servers)]
         LoadBalanceStatus.roundrobin_cnt += 1
-        host = f"http://{server['ipv4']}:{server['port']}"
+        host = f"{server['ipv4']}:{server['port']}"
         try:
-            resp = requests.get(f"{host}{api_path}", timeout=0.1)
+            resp = requests.get(f"http://{host}{api_path}", timeout=0.1)
             if resp.ok:
-                return host
+                ret_host = f"http://{host}" if use_http else host
+                return ret_host
         except Exception as e:
             traceback.print_exc()
             dao_server_discovery.unregister_server(server['ipv4'], server['port'], server['name'], status="offline_unhealthy", type=server['type'])
@@ -42,7 +43,7 @@ def roundrobin(servers, api_path: str = health_api_path) -> str:
     raise Exception("No healthy server found")
 
 
-def weighted_roundrobin(servers, api_path: str = health_api_path) -> str:
+def weighted_roundrobin(servers, api_path: str = health_api_path, use_http: bool = True) -> str:
     """加权轮询负载均衡算法"""
     weights = []
     total_weight = 0
@@ -66,11 +67,12 @@ def weighted_roundrobin(servers, api_path: str = health_api_path) -> str:
                 break
             pos -= weight
         
-        host = f"http://{server['ipv4']}:{server['port']}"
+        host = f"{server['ipv4']}:{server['port']}"
         try:
-            resp = requests.get(f"{host}{api_path}", timeout=0.1)
+            resp = requests.get(f"http://{host}{api_path}", timeout=0.1)
             if resp.ok:
-                return host
+                ret_host = f"http://{host}" if use_http else host
+                return ret_host
         except Exception as e:
             traceback.print_exc()
             dao_server_discovery.unregister_server(server['ipv4'], server['port'], server['name'], status="offline_unhealthy", type=server['type'])
@@ -80,7 +82,7 @@ def weighted_roundrobin(servers, api_path: str = health_api_path) -> str:
     raise Exception("No healthy server found")
 
 
-def hash_balance(servers: list, key: str, api_path: str = health_api_path) -> str:
+def hash_balance(servers: list, key: str, api_path: str = health_api_path, use_http: bool = True) -> str:
     """哈希负载均衡算法"""
     if not servers:
         raise Exception("No servers available")
@@ -92,12 +94,13 @@ def hash_balance(servers: list, key: str, api_path: str = health_api_path) -> st
         server_index = hash_value % len(servers)
         idx = server_index % len(servers)
         server = servers[idx]
-        host = f"http://{server['ipv4']}:{server['port']}"
+        host = f"{server['ipv4']}:{server['port']}"
         try:
-            resp = requests.get(f"{host}{api_path}", timeout=0.1)
+            resp = requests.get(f"http://{host}{api_path}", timeout=0.1)
             if resp.ok:
                 LoadBalanceStatus.hash_balance_cnt += 1
-                return host
+                ret_host = f"http://{host}" if use_http else host
+                return ret_host
         except Exception as e:
             traceback.print_exc()
             dao_server_discovery.unregister_server(server['ipv4'], server['port'], server['name'], status="offline_unhealthy", type=server['type'])

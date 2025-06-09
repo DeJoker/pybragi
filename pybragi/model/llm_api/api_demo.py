@@ -2,7 +2,7 @@ import logging
 import asyncio
 from tornado import ioloop
 from pybragi.model.llm_api import chat_completions, models
-from pybragi.base.base_handler import make_tornado_web, run_tornado_app, register_exit_signal
+from pybragi.base.base_handler import make_tornado_web, run_tornado_app, register_exit_handler
 from pybragi.base.species_queue import global_exit_event
 
 def get_models():
@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     async def exit_handler_async():
         logging.info("exit_handler_async start")
-        loop = asyncio.get_running_loop()
+        loop = asyncio.get_event_loop()
         global_exit_event().set() # 1. reject all incoming requests
 
         # 2. shutdown executor
@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
         ioloop.IOLoop.current().stop()
 
-    register_exit_signal(exit_handler_async)
+    register_exit_handler(exit_handler_async)
 
     app = make_tornado_web("openai-transmit")
     app.add_handlers(".*", [
