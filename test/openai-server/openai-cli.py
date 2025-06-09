@@ -1,4 +1,5 @@
 import os, signal
+from pybragi.base import log
 from pybragi.base import process_utils
 import logging
 import time
@@ -21,7 +22,7 @@ res = client.models.list()
 logging.info(res)
 
 completion = client.chat.completions.create(
-  model="qwen3_235b_cpt_0419_25k_2",
+  model="qwen2572_pengv2_1",
   messages=[
     {"role": "user", "content": "你是谁啊"}
   ],

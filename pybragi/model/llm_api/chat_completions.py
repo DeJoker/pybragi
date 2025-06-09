@@ -83,6 +83,7 @@ class ChatCompletions(PrometheusMixIn):
         self.set_header("Cache-Control", "no-cache")
         self.set_header("Connection", "keep-alive")
 
+        chunk = None
         reply = ""
         try:
             metrics = StreamMetrics(request_id, timestamp2, len(str(messages)))

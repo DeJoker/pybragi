@@ -13,7 +13,7 @@ console_handler.setFormatter(logging.Formatter(fmt=format, datefmt=datefmt))
 
 logging.basicConfig(format=format, datefmt=datefmt, level=logging.INFO, force=True, handlers=[logging.StreamHandler()])
 
-from pybragi import __version__
+from pybragi.version import __version__
 logging.info(f"init log. pybragi version: {__version__}")
 
 def use_loguru():
