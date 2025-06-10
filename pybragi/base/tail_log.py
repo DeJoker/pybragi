@@ -1,43 +1,14 @@
+import os
+from pybragi.base import time_utils
+import traceback
+import logging
 
-from io import BufferedReader
-
-
-class TailNLog():
-    def __init__(self, logfile='', tail=100, total_lines=3000, **kwargs):
-        self.logfile = logfile
-        self.tail = tail
-        self.total_lines = total_lines
-        self.current_pos = None
-        self.io: BufferedReader = None
-        self.stop_reading = False
-        self.last_data = ""
-
-        self.load_logfile()
-
-        # kwargs.pop("value", None)
-        # super().__init__(value=self.read_to_end, **kwargs)
-
-    def read_to_end(self) -> str:
-        if self.current_pos is None or self.stop_reading:
-            return None
-        self.io.seek(self.current_pos)
-        b = self.io.read().decode()
-        self.current_pos = self.io.tell()
-        if b:
-            self.last_data += b
-            lines = self.last_data.splitlines()
-            if len(lines) > self.total_lines:
-                lines = lines[-self.total_lines:]
-            self.last_data = "\n".join(lines)
-            
-        return self.last_data
-
-    @staticmethod
-    def find_start_position(io: BufferedReader, tail=100) -> int:
-        io.seek(0, 2)
-        file_size = io.tell()
+@time_utils.elapsed_time_limit(0.005)
+def _tail_line_log(logfile_path: str, tail: int) -> str:
+    with open(logfile_path, "rb") as io:
+        io.seek(0, 2)  # move to the end
         lines_found = 0
-        block_size = 1024
+        block_size = 64 * 1024
         blocks = []
 
         while io.tell() > 0 and lines_found <= tail:
@@ -45,20 +16,34 @@ class TailNLog():
             block = io.read(block_size)
             blocks.append(block)
             lines_found += block.count(b"\n")
-            io.seek(-len(block), 1)
-
+            
+            io.seek(-len(block), 1) 
+        
         all_read_bytes = b"".join(reversed(blocks))
         lines = all_read_bytes.splitlines()
 
         if tail >= len(lines):
-            return 0
-        last_lines = b"\n".join(lines[-tail :])
-        return file_size - len(last_lines) - 1
+            decoded_content = all_read_bytes.decode(errors='ignore')
+        else:
+            last_lines_bytes = b"\n".join(lines[-tail:])
+            decoded_content = last_lines_bytes.decode(errors='ignore')
 
-    def load_logfile(self):
-        self.stop_reading = True
-        self.io = open(self.logfile, "rb")
-        self.current_pos = max(self.find_start_position(self.io, self.tail), 0)
-        self.stop_reading = False
+        return decoded_content
 
+
+def safe_read_tail_log(logfile_path: str, tail: int) -> str:
+    try:
+        if not os.path.exists(logfile_path):
+            logging.error(f"Log file not found: {logfile_path}")
+            return ""
+        return _tail_line_log(logfile_path, tail)
+    except Exception as e:
+        traceback.print_exc()
+        logging.error(f"Error reading log file: {e}")
+        return ""
+
+if __name__ == "__main__":
+    logfile = "/cano_nas01/workspace/online/llm_infer/logs/onetime_kafka/shve-aigc-gpt-H20-0002/dep#qwen2572_18k_8card_5#aigc_qwen_queue#vllm_triton_kafka-18001.log.3"
+    data = safe_read_tail_log(logfile_path=logfile, tail=3000)
+    # print(data)
 
