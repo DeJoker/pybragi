@@ -14,8 +14,8 @@ Repository = "https://github.com/DeJoker/pybragi"
 
 [project]
 name = "pybragi"
-version = "0.0.18.post2"
-description = "pybragi is server framework"
+version = "0.0.19"
+description = "pybragi is web server framework for fast&simple usage"
 authors = [
     {name = "DeJoker", email = "localjie@163.com"},
 ]

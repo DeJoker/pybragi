@@ -154,13 +154,20 @@ def kv_for_show(body: dict):
     return ret
 
 
-active_handlers = weakref.WeakSet()
+active_handlers = weakref.WeakKeyDictionary()
 
 
 pass_path = ["/healthcheck", "/health", "/metrics"]
 class PrometheusMixIn(web.RequestHandler):
+
+    def bragi_connection_info(self):
+        info_str = f"{self.request.remote_ip} {self.request.method.upper()} {self.request.path} request-time:{self.request.request_time():.3f}"
+        return info_str
+
     async def prepare(self):
-        active_handlers.add(self)
+        if type(self) not in active_handlers:
+            active_handlers[type(self)] = []
+        active_handlers[type(self)].append(self)
 
         if global_exit_event().is_set():
             self.set_status(503)
@@ -190,8 +197,10 @@ class PrometheusMixIn(web.RequestHandler):
                 pass
 
     def on_finish(self):
-        if self in active_handlers:
-            active_handlers.remove(self)
+        if type(self) in active_handlers and self in active_handlers[type(self)]:
+            active_handlers[type(self)].remove(self)
+            if len(active_handlers[type(self)]) == 0:
+                active_handlers.pop(type(self))
 
         path = self.request.path
         method = self.request.method

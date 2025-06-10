@@ -124,6 +124,6 @@ if __name__ == "__main__":
         logging.info(f"system gpu memory: allocated: {allocated:.2f}MB, free: {free:.2f}MB, total: {total:.2f}MB")
 
         allocated, cached = process_gpu_memory()
-        logging.info(f"process gpu memory: allocated: {allocated}MB, cached: {cached}MB")
+        logging.info(f"process gpu memory: allocated: {allocated:.2f}MB, cached: {cached:.2f}MB")
         logging.info(f"--------------------------------------")
         time.sleep(1)

@@ -1,11 +1,16 @@
 
-# pybragi is server framework
-- tronado
-- pydantic
-- thrift
-- prometheus
-- kafka
-- mongo
+# pybragi is web server framework
+- tronado http&websocket impl
+  - flask way
+  - fastapi way
+- service-discovery and service-register
+  - mongo way
+  - consul way
+- graceful shutdown
+- prometheus metrics
+- benchmark tools for openai_api and http_api
+- kafka producer and consumer
+  - sliding window 
 
 
 

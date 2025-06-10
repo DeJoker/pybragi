@@ -130,9 +130,11 @@ if __name__ == "__main__":
     async def exit_func(start_time: datetime):
         global_exit_event().set()
         while metrics.active_handlers:
-            logging.info(f"active_handlers: {len(metrics.active_handlers)}")
-            for handler in metrics.active_handlers:
-                logging.info(f"handler: {handler}")
+            for handler_type, handlers in metrics.active_handlers.items():
+                logging.info(f"{handler_type} length: {len(handlers)}")
+                for handler in handlers:
+                    handler: metrics.PrometheusMixIn
+                    logging.info(f"handler: {handler.bragi_connection_info()}")
             await asyncio.sleep(0.5)
         
         logging.info(f"server start_time: {start_time}, duration: {datetime.now() - start_time}")
@@ -141,11 +143,20 @@ if __name__ == "__main__":
     register_exit_handler(partial(exit_func, datetime.now()))
 
     class RootHandler(CORSBaseHandler, metrics.PrometheusMixIn):
+
+        def bragi_connection_info(self):
+            base_info = super().bragi_connection_info()
+            
+            user_id = self.current_user.id if self.current_user else "anonymous"
+            extra_info = f"user_id:{user_id}"
+
+            return f"{base_info} {extra_info}"
+        
         async def get(self):
             self.write("hello world")
         
         async def post(self):
-            await asyncio.sleep(10)
+            await asyncio.sleep(5)
             self.write("hello world")
 
     CORSBaseHandler.origin = args.origin # 这里可以修改 origin
@@ -157,4 +168,5 @@ if __name__ == "__main__":
     ])
 
     run_tornado_app(app, args.port)
+    logging.info("Tornado app done")
 
