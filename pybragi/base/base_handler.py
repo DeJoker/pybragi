@@ -56,7 +56,8 @@ class HealthCheckHandler(metrics.PrometheusMixIn):
 
 class CORSBaseHandler(web.RequestHandler):
     origin="*"
-    headers="x-requested-with, content-type, authorization, x-user-id, x-token"
+    headers="*"
+    # headers="x-requested-with, content-type, authorization, x-user-id, x-token"
     methods="GET, POST, PUT, DELETE, OPTIONS"
     
     # set_default_headers -> initialize -> prepare # set_default_headers 在 initialize 之前调用

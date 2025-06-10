@@ -83,17 +83,12 @@ def record_gpu_utilty(sample_interval=2):
 
         except KeyboardInterrupt:
             print("Stopped by User")
-        finally:
-            pass
-
-    pynvml.nvmlShutdown()
 
 
-def get_gpu_utilty_prometheus(query = f'avg_over_time(DCGM_FI_DEV_GPU_UTIL{{Hostname="beijing-aigc-gpt-gpu02"}}[7d])'):
-    PROMETHEUS = "http://192.168.220.223:9090"
+def get_gpu_utilty_prometheus(prometheus_url = "http://192.168.220.223:9090", query = f'avg_over_time(DCGM_FI_DEV_GPU_UTIL{{Hostname="beijing-aigc-gpt-gpu02"}}[7d])'):
     end_time = int(time.time())
 
-    url = f"{PROMETHEUS}/api/v1/query"
+    url = f"{prometheus_url}/api/v1/query"
     params = {
         "query": query,
         # "start": end_time - 5 * 60,
