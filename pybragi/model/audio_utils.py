@@ -1,6 +1,11 @@
 import logging
 import numpy as np
 from scipy import signal
+import os
+import traceback
+import requests
+from io import BytesIO
+
 
 def convert_float32_to_int16(float32_array: np.ndarray) -> np.ndarray:
     """
@@ -65,4 +70,61 @@ def resample(input_data: bytes, np_type, origin_rate, target_rate):
     
     return resampled_audio_np
 
+
+def audio2(i, o, format, sr):
+    import av
+    inp = av.open(i, "r")
+    out = av.open(o, "w", format=format)
+    if format == "ogg":
+        format = "libvorbis"
+    if format == "f32le":
+        format = "pcm_f32le"
+
+    ostream = out.add_stream(format, channels=1)
+    ostream.sample_rate = sr
+
+    for frame in inp.decode(audio=0):
+        for p in ostream.encode(frame):
+            out.mux(p)
+
+    out.close()
+    inp.close()
+
+def load_audio(file, sr):
+    file = (
+        file.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
+    )  # 防止小白拷路径头尾带了空格和"和回车
+    if os.path.exists(file) == False:
+        raise RuntimeError(
+            "You input a wrong audio path that does not exists, please fix it!"
+        )
+    try:
+        with open(file, "rb") as f:
+            with BytesIO() as out:
+                audio2(f, out, "f32le", sr)
+                return np.frombuffer(out.getvalue(), np.float32).flatten()
+    except:
+        traceback.format_exc()
+        return None
+
+def load_audio_from_url(url: str, sr: int):
+    try:
+        with requests.get(url) as r:
+            with BytesIO() as out:
+                if not r.content:
+                    logging.error(f"empty content: {url}")
+                    raise RuntimeError("empty content")
+                audio2(BytesIO(r.content), out, "f32le", sr)
+                return np.frombuffer(out.getvalue(), np.float32).flatten()
+    except:
+        traceback.format_exc()
+        logging.error(f"load failed: {url}")
+
+
+def resample_librosa(audio, origin_rate, target_rate):
+    import librosa
+    return librosa.resample(audio, orig_sr=origin_rate, target_sr=target_rate)
+
+if __name__ == "__main__":
+    print(load_audio_from_url("http://zyvideo101.oss-cn-shanghai.aliyuncs.com/zyad/73/0c/201a-cd10-11ef-bdec-00163e023ce8", 16000))
 
