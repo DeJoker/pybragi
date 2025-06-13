@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from pybragi.base import time_utils
 from typing import Any, Optional, Callable
@@ -7,6 +6,7 @@ import heapq
 from threading import Lock, Thread
 import time
 import logging
+import weakref
 
 
 def move_model_to_device(model: Any, device: str):
@@ -48,6 +48,9 @@ class ModelWrapper:
         return self.last_used > other.last_used
     
 class LRUCacheModelQueue:
+    _weakref_queue = weakref.WeakSet()
+    _cleanup_thread: Optional[Thread] = None
+
     def __init__(self, device: Any, name="hubert", move_to_cpu=100, time_to_live=600, min_reverse_length=2):
         self.heap = []  # Priority queue using heapq
         self.lock = Lock()
@@ -56,12 +59,14 @@ class LRUCacheModelQueue:
         self.move_to_cpu = move_to_cpu
         self.time_to_live = time_to_live
         self.min_reverse_length = min_reverse_length
-        
+
+        LRUCacheModelQueue._weakref_queue.add(self)
         logging.info(f"{self}")
 
         # Start cleanup thread
-        self.cleanup_thread = Thread(target=self._cleanup_loop, daemon=True)
-        self.cleanup_thread.start()
+        if LRUCacheModelQueue._cleanup_thread is None:
+            LRUCacheModelQueue._cleanup_thread = Thread(target=LRUCacheModelQueue._cleanup_loop, daemon=True)
+            LRUCacheModelQueue._cleanup_thread.start()
     
 
     def __str__(self):
@@ -104,10 +109,12 @@ class LRUCacheModelQueue:
         
         return wrapper.model
     
-    def _cleanup_loop(self):
+    @classmethod
+    def _cleanup_loop(cls):
         while True:
+            for cache in cls._weakref_queue:
+                cache._cleanup()
             time.sleep(1)
-            self._cleanup()
     
     def _cleanup(self):
         current_time = time.time()
