@@ -1,7 +1,6 @@
 from typing import Any, Callable, Dict
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-ticker_key = "xxxxx"
 
 # 客户端发送 action   服务器接收 action
 run_task_action = "run-task"

@@ -3,7 +3,7 @@ import os, signal
 import logging
 from datetime import datetime
 from typing import Callable, Optional
-from tornado import web, gen, ioloop
+from tornado import web, ioloop
 
 import asyncio
 from pybragi.base import metrics
@@ -19,13 +19,14 @@ class Echo(metrics.PrometheusMixIn):
         return self.write(str(self.request.arguments))
 
 
+#  health 超时请求最可能的问题是 对端服务阻塞 所以应该检查服务方ioloop等
+# 不要质疑接口的正确性 如果检查失败 说明服务有问题
 class HealthCheckHandler(metrics.PrometheusMixIn):
     # https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.initialize
     def initialize(self, name=""):
         self.name = name
 
     def _log(self):
-        # logging.info(f"{self.request.request_time()}")
         if self.request.request_time() > 0.002:
             super()._log()
         return
@@ -49,10 +50,12 @@ class HealthCheckHandler(metrics.PrometheusMixIn):
     async def get(self):
         res = self.current()
         self.write(res)
+        self.finish()
 
     async def post(self):
         res = self.current()
         self.write(res)
+        self.finish()
 
 class CORSBaseHandler(web.RequestHandler):
     origin="*"

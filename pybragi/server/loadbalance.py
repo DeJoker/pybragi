@@ -3,8 +3,7 @@ import requests
 import traceback
 import logging
 
-from pybragi.version import __version__
-from pybragi.base import hash
+from pybragi.bragi_config import BragiConfig
 from pybragi.server import dao_server_discovery
 
 
@@ -17,23 +16,30 @@ class LoadBalanceStatus:
     boardcast_cnt = 0
 
 
-def boardcast(servers) -> list:
+def boardcast(servers, use_http: bool = True) -> list:
     hosts = []
     for server in servers:
-        hosts.append(f"http://{server['ipv4']}:{server['port']}")
+        host = f"{server['ipv4']}:{server['port']}"
+        if use_http:
+            host = f"http://{host}"
+        
+        hosts.append(host)
     LoadBalanceStatus.boardcast_cnt += 1
     return hosts
 
-
-def roundrobin(servers, api_path: str = health_api_path, use_http: bool = True) -> str:
+#  health 超时请求最可能的问题是 对端服务阻塞 所以应该检查服务方ioloop等
+def roundrobin(servers, api_path: str = health_api_path, use_http: bool = True, timeout=0.1) -> str:
     for _ in range(len(servers)):
         server = servers[LoadBalanceStatus.roundrobin_cnt % len(servers)]
         LoadBalanceStatus.roundrobin_cnt += 1
         host = f"{server['ipv4']}:{server['port']}"
+        ret_host = f"http://{host}" if use_http else host
+        if not BragiConfig.LBCheck:
+            return ret_host
+        
         try:
-            resp = requests.get(f"http://{host}{api_path}", timeout=0.1)
+            resp = requests.get(f"http://{host}{api_path}", timeout=timeout)
             if resp.ok:
-                ret_host = f"http://{host}" if use_http else host
                 return ret_host
         except Exception as e:
             traceback.print_exc()
@@ -43,7 +49,7 @@ def roundrobin(servers, api_path: str = health_api_path, use_http: bool = True) 
     raise Exception("No healthy server found")
 
 
-def weighted_roundrobin(servers, api_path: str = health_api_path, use_http: bool = True) -> str:
+def weighted_roundrobin(servers, api_path: str = health_api_path, use_http: bool = True, timeout=0.1) -> str:
     """加权轮询负载均衡算法"""
     weights = []
     total_weight = 0
@@ -68,10 +74,13 @@ def weighted_roundrobin(servers, api_path: str = health_api_path, use_http: bool
             pos -= weight
         
         host = f"{server['ipv4']}:{server['port']}"
+        ret_host = f"http://{host}" if use_http else host
+        if not BragiConfig.LBCheck:
+            return ret_host
+        
         try:
-            resp = requests.get(f"http://{host}{api_path}", timeout=0.1)
+            resp = requests.get(f"http://{host}{api_path}", timeout=timeout)
             if resp.ok:
-                ret_host = f"http://{host}" if use_http else host
                 return ret_host
         except Exception as e:
             traceback.print_exc()
@@ -82,7 +91,7 @@ def weighted_roundrobin(servers, api_path: str = health_api_path, use_http: bool
     raise Exception("No healthy server found")
 
 
-def hash_balance(servers: list, key: str, api_path: str = health_api_path, use_http: bool = True) -> str:
+def hash_balance(servers: list, key: str, api_path: str = health_api_path, use_http: bool = True, timeout=0.1) -> str:
     """哈希负载均衡算法"""
     if not servers:
         raise Exception("No servers available")
@@ -95,11 +104,15 @@ def hash_balance(servers: list, key: str, api_path: str = health_api_path, use_h
         idx = server_index % len(servers)
         server = servers[idx]
         host = f"{server['ipv4']}:{server['port']}"
+        ret_host = f"http://{host}" if use_http else host
+        if not BragiConfig.LBCheck:
+            return ret_host
+
+
         try:
-            resp = requests.get(f"http://{host}{api_path}", timeout=0.1)
+            resp = requests.get(f"http://{host}{api_path}", timeout=timeout)
             if resp.ok:
                 LoadBalanceStatus.hash_balance_cnt += 1
-                ret_host = f"http://{host}" if use_http else host
                 return ret_host
         except Exception as e:
             traceback.print_exc()
