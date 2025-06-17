@@ -3,6 +3,7 @@
 class BragiConfig:
     IPv4 = "127.0.0.1"
     LBCheck = True # LoadBalanceWithHealthCheck
+    ForceExitTimeout = 20.0 # seconds
 
 
 class MongoConfig:

@@ -8,6 +8,7 @@ from tornado import web, ioloop
 import asyncio
 from pybragi.base import metrics
 from pybragi.base.species_queue import global_exit_event
+from pybragi.bragi_config import BragiConfig
 
 class Echo(metrics.PrometheusMixIn):
     def post(self):
@@ -88,9 +89,10 @@ def make_tornado_web(service: str, big_latency=False, kafka=False):
     return app
 
 def run_tornado_app(app: web.Application, port=8888):
-    # loop = asyncio.new_event_loop()
-    # asyncio.set_event_loop(loop)
-    asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    # asyncio.get_event_loop()
     app.listen(port)
 
     from pybragi.base import ps
@@ -100,11 +102,11 @@ def run_tornado_app(app: web.Application, port=8888):
 
 # 1. 无法退出可能是启动的 threading join.  失效其中一个原因是   使用了 finally: continue  否则线程无法退出
 # 2. 最好在 main 结束打印一个日志 有日志就是正确退出
-def handle_exit_signal(signum, frame, func: Optional[Callable], timeout: int):
+def handle_exit_signal(signum, frame, func: Optional[Callable], timeout):
     logging.info("Received exit signal. Setting exit event.")
     loop = asyncio.get_event_loop()
 
-    async def timeout_exit(timeout: int):
+    async def timeout_exit(timeout):
         await asyncio.sleep(timeout)
         logging.info(f"timeout {timeout} force exit")
         os._exit(1)
@@ -115,7 +117,7 @@ def handle_exit_signal(signum, frame, func: Optional[Callable], timeout: int):
     loop.call_soon_threadsafe(loop.create_task, timeout_exit(timeout))
 
 
-def register_exit_handler(func: Optional[Callable] = None, timeout: int = 10):
+def register_exit_handler(func: Optional[Callable] = None, timeout = BragiConfig.ForceExitTimeout):
     signal.signal(signal.SIGINT, lambda signum, frame: handle_exit_signal(signum, frame, func, timeout))
     signal.signal(signal.SIGTERM, lambda signum, frame: handle_exit_signal(signum, frame, func, timeout))
 
