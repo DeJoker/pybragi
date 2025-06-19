@@ -74,6 +74,20 @@ def get_all_server(type, online: bool = True) -> list[dict]:
     return mongo_base.get_items(server_table, query)
 
 
+
+# lowest   ip+port+datetime   is master
+def is_me_master(ipv4: str, port: int, name: str, type: str = "", reverse: bool = False):
+    me = f"{ipv4}:{port}"
+    items = get_server_online(name, type)
+
+    sorted_key = [f"{item['ipv4']}:{item['port']}:{item['datetime']}" for item in items]
+    sorted_key.sort(reverse=reverse)
+    if me in sorted_key[0]:
+        return True
+    return False
+
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()

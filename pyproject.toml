@@ -35,7 +35,7 @@ dependencies = [
     "kafka-python>=2.0.2",
     "requests>=2.22.0",
     "prometheus_client>=0.14.1",
-    "numpy>=1.23.5",
+    "numpy>=1.25,<2",
     "uvicorn",
     "nvidia-ml-py",
     "readerwriterlock",
