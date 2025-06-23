@@ -2,12 +2,12 @@ import os, signal
 
 import logging
 from datetime import datetime
+import threading
 from typing import Callable, Optional
 from tornado import web, ioloop
 
 import asyncio
 from pybragi.base import metrics
-from pybragi.base.species_queue import global_exit_event
 from pybragi.bragi_config import BragiConfig
 
 class Echo(metrics.PrometheusMixIn):
@@ -102,7 +102,7 @@ def run_tornado_app(app: web.Application, port=8888):
 
 # 1. 无法退出可能是启动的 threading join.  失效其中一个原因是   使用了 finally: continue  否则线程无法退出
 # 2. 最好在 main 结束打印一个日志 有日志就是正确退出
-def handle_exit_signal(signum, frame, func: Optional[Callable], timeout):
+def handle_exit_signal(signum, frame, async_func: Optional[Callable], timeout):
     logging.info("Received exit signal. Setting exit event.")
     loop = asyncio.get_event_loop()
 
@@ -111,15 +111,23 @@ def handle_exit_signal(signum, frame, func: Optional[Callable], timeout):
         logging.info(f"timeout {timeout} force exit")
         os._exit(1)
 
-    if func:
-        loop.call_soon_threadsafe(loop.create_task, func())
+    if async_func:
+        loop.call_soon_threadsafe(loop.create_task, async_func())
     
     loop.call_soon_threadsafe(loop.create_task, timeout_exit(timeout))
 
 
-def register_exit_handler(func: Optional[Callable] = None, timeout = BragiConfig.ForceExitTimeout):
-    signal.signal(signal.SIGINT, lambda signum, frame: handle_exit_signal(signum, frame, func, timeout))
-    signal.signal(signal.SIGTERM, lambda signum, frame: handle_exit_signal(signum, frame, func, timeout))
+def register_exit_handler(async_func: Optional[Callable] = None, timeout = BragiConfig.ForceExitTimeout):
+    signal.signal(signal.SIGINT, lambda signum, frame: handle_exit_signal(signum, frame, async_func, timeout))
+    signal.signal(signal.SIGTERM, lambda signum, frame: handle_exit_signal(signum, frame, async_func, timeout))
+
+
+g_exit_event = None
+def global_exit_event():
+    global g_exit_event
+    if not g_exit_event:
+        g_exit_event = threading.Event()
+    return g_exit_event
 
 
 # python -m service.base.base_handler --origin="127.0.0.1"

@@ -105,11 +105,7 @@ def global_priority_queue(task_queue :Optional[PriorityQueue] = None):
     return g_priority_queue
 
 
-# 注册退出信号处理函数
-g_exit_event = None
-def global_exit_event():
-    global g_exit_event
-    if not g_exit_event:
-        g_exit_event = threading.Event()
-    return g_exit_event
+# temporary backward compatibility
+from pybragi.base.base_handler import global_exit_event
+g_exit_event = global_exit_event()
 
