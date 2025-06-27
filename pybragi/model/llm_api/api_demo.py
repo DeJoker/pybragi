@@ -3,7 +3,7 @@ import asyncio
 from tornado import ioloop
 from pybragi.model.llm_api import chat_completions, models
 from pybragi.base.base_handler import make_tornado_web, run_tornado_app, register_exit_handler
-from pybragi.base.species_queue import global_exit_event
+from pybragi.base.shutdown import global_exit_event
 
 def get_models():
     return [

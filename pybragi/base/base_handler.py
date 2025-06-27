@@ -9,6 +9,8 @@ from tornado import web, ioloop
 import asyncio
 from pybragi.base import metrics
 from pybragi.bragi_config import BragiConfig
+from pybragi.base.shutdown import global_exit_event
+
 
 class Echo(metrics.PrometheusMixIn):
     def post(self):
@@ -121,13 +123,6 @@ def register_exit_handler(async_func: Optional[Callable] = None, timeout = Bragi
     signal.signal(signal.SIGINT, lambda signum, frame: handle_exit_signal(signum, frame, async_func, timeout))
     signal.signal(signal.SIGTERM, lambda signum, frame: handle_exit_signal(signum, frame, async_func, timeout))
 
-
-g_exit_event = None
-def global_exit_event():
-    global g_exit_event
-    if not g_exit_event:
-        g_exit_event = threading.Event()
-    return g_exit_event
 
 
 # python -m service.base.base_handler --origin="127.0.0.1"

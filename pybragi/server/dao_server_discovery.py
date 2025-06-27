@@ -80,9 +80,11 @@ def is_me_master(ipv4: str, port: int, name: str, type: str = "", reverse: bool 
     me = f"{ipv4}:{port}"
     items = get_server_online(name, type)
 
-    sorted_key = [f"{item['ipv4']}:{item['port']}:{item['datetime']}" for item in items]
-    sorted_key.sort(reverse=reverse)
-    if me in sorted_key[0]:
+    items = sorted(items, key=lambda x: f"{x['ipv4']}:{x['port']}:{x['datetime']}", reverse=reverse)
+
+    # sorted_key = [f"{item['ipv4']}:{item['port']}:{item['datetime']}" for item in items]
+    # sorted_key.sort(reverse=reverse)
+    if me in items[0]:
         return True
     return False
 

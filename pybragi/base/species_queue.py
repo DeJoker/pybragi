@@ -106,6 +106,6 @@ def global_priority_queue(task_queue :Optional[PriorityQueue] = None):
 
 
 # temporary backward compatibility
-from pybragi.base.base_handler import global_exit_event
+from pybragi.base.shutdown import global_exit_event
 g_exit_event = global_exit_event()
 

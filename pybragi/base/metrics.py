@@ -9,7 +9,7 @@ from tornado import web
 from tornado.concurrent import run_on_executor
 from concurrent.futures import ThreadPoolExecutor
 
-from pybragi.base.species_queue import global_exit_event
+from pybragi.base.shutdown import global_exit_event
 global_exit_event()
 
 class MetricsManager:
