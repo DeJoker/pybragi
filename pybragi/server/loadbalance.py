@@ -5,7 +5,7 @@ import logging
 
 from pybragi.bragi_config import BragiConfig
 from pybragi.server import dao_server_discovery
-
+from pybragi.base import hash
 
 health_api_path = "/health"
 
