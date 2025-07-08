@@ -4,11 +4,8 @@ from typing import Any, Optional
 import asyncio
 import asyncpg
 
-
-
-
 class PostgreImpl:
-    def __init__(self, host: str, port: int, database: str, user: str, password: str, max_pool_size: int = 4):
+    def __init__(self, host: str, port: int, database: str, user: str, password: str, max_pool_size: int = 10):
         self.host = host
         self.port = port
         self.user = user
@@ -37,7 +34,7 @@ class PostgreImpl:
             logging.info(
                 f"PostgreSQL, Creation success table {table_name} in PostgreSQL database"
             )
-        except Exception as e:
+        except Exception:
             traceback.print_exc()
             raise
 
@@ -45,9 +42,12 @@ class PostgreImpl:
     async def check_table(self, table_name: str, ddl = ""):
         try:
             await self.query(f"SELECT 1 FROM {table_name} LIMIT 1")
+            logging.info(f"PostgreSQL, check table {table_name} passed")
         except Exception:
             if ddl:
                 await self.create_table(table_name, ddl)
+            else:
+                traceback.print_exc()
     
     async def query(
         self,
@@ -111,7 +111,8 @@ class PostgreImpl:
             asyncpg.exceptions.DuplicateTableError,
         ) as e:
             if upsert:
-                print("Key value duplicate, but upsert succeeded.")
+                # logging.info("Key value duplicate, but upsert succeeded.")
+                pass
             else:
                 logging.error(f"Upsert error: {e}")
         except Exception as e:
@@ -119,18 +120,24 @@ class PostgreImpl:
             traceback.print_exc()
             raise
 
-
 class ClientManager:
     _instances: dict[str, Any] = {"db": None, "ref_count": 0}
     _lock = asyncio.Lock()
 
     @classmethod
-    async def init_client(cls, table_name: str, ddl: str, *args, **kwargs):
-        db = PostgreImpl(*args, **kwargs)
-        await db.initdb()
-        await db.check_table(table_name, ddl)
-        cls._instances["db"] = db
-        cls._instances["ref_count"] = 0
+    async def init_client(cls, *args, **kwargs):
+        if cls._instances["db"] is None:
+            db = PostgreImpl(*args, **kwargs)
+            await db.initdb()
+            cls._instances["db"] = db
+            cls._instances["ref_count"] = 0
+        else:
+            db = cls._instances["db"]
+
+    async def check_table(self, table_name: str, ddl: str):
+        if self._instances["db"] is None:
+            raise Exception("Client not initialized")
+        await self._instances["db"].check_table(table_name, ddl)
 
     @classmethod
     async def get_client(cls) -> PostgreImpl:
