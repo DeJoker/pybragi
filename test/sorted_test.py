@@ -1,5 +1,13 @@
 
 
+def get_key():
+    return None, None
+
+x = get_key()
+if not x:
+    print("x is None")
+else:
+    print("!!!!! tuple of None is not None!!!!!")  # this way
 
 xx = [
     {"ipv4": "192.168.1.1", "port": 8080, "datetime": "2021-01-01 12:00:01"},

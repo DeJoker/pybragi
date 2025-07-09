@@ -3,7 +3,7 @@ import threading
 import time
 import logging
 from pybragi.base.async_manager import (
-    AsyncManagerContext, get_all_async_objects_from_manager, init_async_manager, 
+    AsyncManagerContext, get_all_async_objects_from_manager, get_async_length_from_manager, init_async_manager, 
     get_async_object_from_manager, _bind_async_object_to_manager, run_coro_with_manager
 )
 
@@ -20,7 +20,6 @@ class MockAsyncRAG:
         return f"insert done: {contents}"
 
 async def create_mock_rag():
-    """创建模拟的异步对象"""
     return MockAsyncRAG()
 
 
@@ -55,21 +54,39 @@ def test_run_coro_with_manager():
 
 
 
-
-
-
-
-
-
-#####################################################################################################
-# other test
-
 def test_basic_async_object_context():
     print("=== test basic AsyncManagerContext ===")
+
+    group_name = "test_rag"
+    init_async_manager(group_name, 1, create_mock_rag)
     
-    init_async_manager("test_rag", 1, create_mock_rag)
+    with AsyncManagerContext(group_name) as (rag, loop):
+        logging.info(f"get async object: {rag.name}")
+        
+        future = asyncio.run_coroutine_threadsafe(
+            rag.ainsert("test content", ids=["1", "2"], workspace="test_session"),
+            loop
+        )
+        result = future.result()
+        logging.info(f"result: {result}")
+
+
+def test_large_async_request_exception():
+    print("=== test basic AsyncManagerContext ===")
+
+    group_name = "test_rag_exception"
+    init_async_manager(group_name, 1, create_mock_rag)
     
-    with AsyncManagerContext("test_rag") as (rag, loop):
+    async_length = get_async_length_from_manager(group_name)
+    logging.info(f"async length: {async_length}")
+
+    async_object, loop = get_async_object_from_manager(group_name)
+    logging.info(f"get async object: {async_object.name}")
+
+    async_length = get_async_length_from_manager(group_name)
+    logging.info(f"async length: {async_length}")
+
+    with AsyncManagerContext(group_name) as (rag, loop):
         logging.info(f"get async object: {rag.name}")
         
         future = asyncio.run_coroutine_threadsafe(
@@ -130,7 +147,7 @@ class AsyncObjectContextWithCallback:
     def __enter__(self):
         result = get_async_object_from_manager(self.group_name)
         if result is None:
-            raise RuntimeError(f"队列 '{self.group_name}' 中没有可用的异步对象")
+            raise RuntimeError(f"queue '{self.group_name}' has no available async object")
         
         self._async_obj, self._loop = result
         return self
@@ -192,9 +209,16 @@ if __name__ == "__main__":
     test_run_coro_with_manager()
     time.sleep(1)
 
-    # other test
     test_basic_async_object_context()
     time.sleep(1)
+
+    try:
+        test_large_async_request_exception()
+    except Exception as e:
+        logging.info(f"test_large_async_request_exception failed: {e}")
+    time.sleep(1)
+
+    # other test
     test_async_with_callback()
     time.sleep(1)
     test_improved_context()

@@ -15,8 +15,6 @@ last_log_file = ""
 def log_request_to_file(name, request_json, log_dir="/cano_nas01/cyj/request", max_lines=1e6):
     global total_log_count, last_log_file
     try:
-        if name not in log_dir:
-            log_dir = os.path.join(log_dir, name)
         os.makedirs(log_dir, exist_ok=True)
 
         today = datetime.datetime.now().strftime("%Y-%m-%d")

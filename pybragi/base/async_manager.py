@@ -43,10 +43,10 @@ def init_async_manager(group_name: str, thread_count: int, initialize_async_obje
 def get_async_object_from_manager(group_name: str) -> Tuple[Any, asyncio.AbstractEventLoop]:
     global async_object_group_map
     if group_name not in async_object_group_map:
-        return None
+        return None, None
     
     if len(async_object_group_map[group_name]) == 0:
-        return None
+        return None, None
     
     async_object, loop = async_object_group_map[group_name].pop(0)
     return async_object, loop
@@ -59,6 +59,11 @@ def get_all_async_objects_from_manager(group_name: str):
     return async_object_group_map[group_name]
 
 
+def get_async_length_from_manager(group_name: str):
+    global async_object_group_map
+    if group_name not in async_object_group_map:
+        return 0
+    return len(async_object_group_map[group_name])
 
 
 
@@ -86,10 +91,9 @@ class AsyncManagerContext(ContextDecorator):
         self._manual_return = False
 
     def __enter__(self) -> Tuple[Any, asyncio.AbstractEventLoop]:
-        result = get_async_object_from_manager(self.group_name)
-        if result is None:
-            raise RuntimeError(f"No available asynchronous object in group '{self.group_name}'. Please ensure it has been initialized and bound using init_and_bind_async_in_thread.")
-        self._async_obj, self._loop = result
+        self._async_obj, self._loop = get_async_object_from_manager(self.group_name)
+        if self._async_obj is None:
+            raise RuntimeError(f"No available asynchronous object in group '{self.group_name}'")
         logging.debug(f"Asynchronous object {id(self._async_obj)} and event loop {id(self._loop)} obtained from queue '{self.group_name}'.")
         return self._async_obj, self._loop
 
