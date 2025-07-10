@@ -1,7 +1,7 @@
 import asyncio
 from contextlib import ContextDecorator
 import logging
-
+from pybragi.base.hash import djb2_hash
 import threading
 import time
 from typing import Any, Callable, Tuple, Optional
@@ -40,7 +40,7 @@ def init_async_manager(group_name: str, thread_count: int, initialize_async_obje
     logging.info(f"async {group_name} in subthraed, run count: {thread_count}")
 
 
-def get_async_object_from_manager(group_name: str) -> Tuple[Any, asyncio.AbstractEventLoop]:
+def pop_async_object_from_manager(group_name: str) -> Tuple[Any, asyncio.AbstractEventLoop]:
     global async_object_group_map
     if group_name not in async_object_group_map:
         return None, None
@@ -49,6 +49,19 @@ def get_async_object_from_manager(group_name: str) -> Tuple[Any, asyncio.Abstrac
         return None, None
     
     async_object, loop = async_object_group_map[group_name].pop(0)
+    return async_object, loop
+
+def hash_async_object_from_manager(group_name: str, key=None) -> Tuple[Any, asyncio.AbstractEventLoop]:
+    global async_object_group_map
+    if group_name not in async_object_group_map:
+        return None, None
+    
+    if len(async_object_group_map[group_name]) == 0:
+        return None, None
+    
+    index = djb2_hash(key) % len(async_object_group_map[group_name])
+    
+    async_object, loop = async_object_group_map[group_name][index]
     return async_object, loop
 
 
@@ -68,41 +81,61 @@ def get_async_length_from_manager(group_name: str):
 
 
 
-def run_coro_with_manager(coro, *, group_name: str, async_obj: Any, loop: asyncio.AbstractEventLoop, callback=None):
+def run_coro_with_manager(coro, *, group_name: str, async_obj: Any, loop: asyncio.AbstractEventLoop, callback=None, return_to_manager: bool = False):
     def done_callback(future):
         try:
             if callback:
                 callback(future)
         finally:
-            _bind_async_object_to_manager(group_name, async_obj, loop)
-            logging.debug(f"Asynchronous object {id(async_obj)} returned to queue via callback.")
+            if return_to_manager:
+                _bind_async_object_to_manager(group_name, async_obj, loop)
+                logging.debug(f"Asynchronous object {id(async_obj)} returned to queue via callback.")
     
     future = asyncio.run_coroutine_threadsafe(coro, loop)
     future.add_done_callback(done_callback)
     return future
 
-
-class AsyncManagerContext(ContextDecorator):
-    
+# unique and exclusive for static async_manager, use in async_object not has asyncio.Lock
+class PopPushAsyncManagerContext(ContextDecorator):
     def __init__(self, group_name: str):
         self.group_name = group_name
         self._async_obj: Any = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
-        self._manual_return = False
 
     def __enter__(self) -> Tuple[Any, asyncio.AbstractEventLoop]:
-        self._async_obj, self._loop = get_async_object_from_manager(self.group_name)
+        self._async_obj, self._loop = pop_async_object_from_manager(self.group_name)
         if self._async_obj is None:
             raise RuntimeError(f"No available asynchronous object in group '{self.group_name}'")
         logging.debug(f"Asynchronous object {id(self._async_obj)} and event loop {id(self._loop)} obtained from queue '{self.group_name}'.")
         return self._async_obj, self._loop
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if not self._manual_return and self._async_obj is not None and self._loop is not None:
+        if self._async_obj is not None and self._loop is not None:
             _bind_async_object_to_manager(self.group_name, self._async_obj, self._loop)
             logging.debug(f"Asynchronous object {id(self._async_obj)} and event loop {id(self._loop)} returned to queue '{self.group_name}'.")
         else:
             logging.warning(f"Attempting to return an empty asynchronous object or event loop to queue '{self.group_name}'. This may indicate a logical error.")
         self._async_obj = None
         self._loop = None
-    
+
+
+# shared for static async_manager, safe for async_object has own asyncio.Lock.
+# multi coroutine may use the same async_object and same lock
+class HashAsyncManagerContext(ContextDecorator):
+    def __init__(self, group_name: str, hash_key: str):
+        self.group_name = group_name
+        self.hash_key = hash_key
+        self._async_obj: Any = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+
+    def __enter__(self) -> Tuple[Any, asyncio.AbstractEventLoop]:
+        self._async_obj, self._loop = hash_async_object_from_manager(self.group_name, self.hash_key)
+
+        if self._async_obj is None:
+            raise RuntimeError(f"No available asynchronous object in group '{self.group_name}'")
+        logging.debug(f"Asynchronous object {id(self._async_obj)} and event loop {id(self._loop)} obtained from queue '{self.group_name}'.")
+        return self._async_obj, self._loop
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._async_obj = None
+        self._loop = None
