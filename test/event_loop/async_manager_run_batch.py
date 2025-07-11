@@ -15,11 +15,17 @@ class OneLongTask:
     def __init__(self):
         self.name = f"one_long_task_{id(self)}"
 
+    async def _actual_work(self):
+        logging.info(f"{self.name} start")
+        await asyncio.sleep(0.3)
+        logging.info(f"{self.name} done")
+
     async def run(self):
-        with PopPushAsyncManagerContext(group_name="one_long_task"):
-            logging.info(f"{self.name} start")
-            await asyncio.sleep(0.3)
-            logging.info(f"{self.name} done")
+        with PopPushAsyncManagerContext(group_name="one_long_task") as (async_obj, loop):
+            # 使用获取到的 event loop 来运行协程
+            future = asyncio.run_coroutine_threadsafe(async_obj._actual_work(), loop)
+            # 等待子线程中的协程完成
+            await asyncio.wrap_future(future)
 
 async def init_one_long_task():
     await asyncio.sleep(0.01)
@@ -40,16 +46,32 @@ class NestAsyncTask:
 
 
 async def run_batch():
-    loop = asyncio.get_event_loop()
     active_tasks = []
 
-    for i in range(10):
-        task = loop.create_task(NestAsyncTask().run())
+    # 减少任务数量便于调试
+    for i in range(5):
+        logging.info(f"Creating task {i}")
+        task = asyncio.create_task(NestAsyncTask().run())
         active_tasks.append(task)
 
+    completed_count = 0
     while active_tasks:
+        logging.info(f"Waiting for {len(active_tasks)} active tasks...")
         done, pending = await asyncio.wait(active_tasks, return_when=asyncio.FIRST_COMPLETED)
-        active_tasks = pending
+        completed_count += len(done)
+        logging.info(f"Completed {len(done)} tasks, total completed: {completed_count}")
+        
+        # 检查完成的任务是否有异常
+        for task in done:
+            try:
+                result = task.result()
+                logging.info(f"Task completed successfully: {task}")
+            except Exception as e:
+                logging.error(f"Task failed with exception: {e}")
+        
+        active_tasks = list(pending)
+    
+    logging.info("All tasks completed!")
 
 if __name__ == "__main__":
     init_async_manager(group_name="one_long_task", thread_count=3, initialize_async_object=init_one_long_task)

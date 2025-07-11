@@ -129,20 +129,31 @@ class PopPushAsyncManagerContext(ContextDecorator):
         self._loop: Optional[asyncio.AbstractEventLoop] = None
 
     def __enter__(self) -> Tuple[Any, asyncio.AbstractEventLoop]:
+        logging.debug(f"Acquiring semaphore for group '{self.group_name}'...")
         self.semaphore.acquire()
-        self._async_obj, self._loop = wait_pop_async_object_from_manager(self.group_name, self.timeout)
+        logging.debug(f"Semaphore acquired for group '{self.group_name}'")
+        # 直接使用不带信号量的 pop 方法，避免双重获取
+        self._async_obj, self._loop = pop_async_object_from_manager(self.group_name)
         if self._async_obj is None:
+            # 如果没有可用对象，需要释放信号量并报错
+            self.semaphore.release()
             raise RuntimeError(f"cannot get async object: '{self.group_name}' timeout: {self.timeout}")
         logging.debug(f"Asynchronous object {id(self._async_obj)} and event loop {id(self._loop)} obtained from queue '{self.group_name}'.")
         return self._async_obj, self._loop
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.semaphore.release()
+        logging.debug(f"Entering __exit__ for group '{self.group_name}', obj: {id(self._async_obj) if self._async_obj else None}")
         if self._async_obj is not None and self._loop is not None:
-            _bind_async_object_to_manager(self.group_name, self._async_obj, self._loop, notify=True)
+            # 避免双重释放：设置 notify=False，手动释放信号量
+            _bind_async_object_to_manager(self.group_name, self._async_obj, self._loop, notify=False)
             logging.debug(f"Asynchronous object {id(self._async_obj)} and event loop {id(self._loop)} returned to queue '{self.group_name}'.")
         else:
             logging.warning(f"Attempting to return an empty asynchronous object or event loop to queue '{self.group_name}'. This may indicate a logical error.")
+        
+        # 在最后释放信号量
+        logging.debug(f"Releasing semaphore for group '{self.group_name}'...")
+        self.semaphore.release()
+        logging.debug(f"Semaphore released for group '{self.group_name}'")
         self._async_obj = None
         self._loop = None
 
