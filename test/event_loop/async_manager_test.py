@@ -2,9 +2,9 @@ import asyncio
 import threading
 import time
 import logging
-from pybragi.base.async_manager import (
+from pybragi.base.thread_bind_async_manager import (
     PopPushAsyncManagerContext, HashAsyncManagerContext, 
-    get_all_async_objects_from_manager, get_async_length_from_manager, init_async_manager, 
+    get_all_async_objects_from_manager, get_async_length_from_manager, get_running_coros, init_async_manager, 
     _bind_async_object_to_manager, run_coro_with_manager,
     pop_async_object_from_manager, hash_async_object_from_manager,
 )
@@ -17,6 +17,7 @@ class MockAsyncRAG:
     
     async def ainsert(self, contents, ids=None, workspace=None, file_paths=None):
         logging.info(f"{self.name} start insert...")
+        logging.info(f"running coros: {get_running_coros()}")
         await asyncio.sleep(0.1)
         logging.info(f"{self.name} insert done")
         return f"insert done: {contents}"
@@ -34,7 +35,7 @@ class MockAsyncLockRAG:
     async def lock_insert(self, contents, ids=None, workspace=None, file_paths=None):
         async with global_lock:
             logging.info(f"{self.name} start")
-            await asyncio.sleep(2)
+            await asyncio.sleep(0.2)
             logging.info(f"{self.name} done")
             return f"lock insert done: {contents}"
 
@@ -112,7 +113,7 @@ def test_large_async_request_exception():
         result = future.result()
         logging.info(f"result: {result}")
 
-def test_hash_async_object_context():
+async def test_hash_async_object_context():
     print("=== test hash AsyncManagerContext ===")
 
     group_name = "test_rag_hash"
@@ -130,11 +131,11 @@ def test_hash_async_object_context():
                 loop
             )
             futures.append(future)
-            # result = future.result()
+            # result = future.result() # block in MainThread. async should use await way
             # logging.info(f"result: {result}")
 
     for future in futures:
-        result = future.result()
+        result = await asyncio.wrap_future(future)
         logging.info(f"result: {result}")
 
 
@@ -144,7 +145,7 @@ def test_hash_async_object_context():
     print("locked asyncio.Lock will raise error RuntimeError: <asyncio.locks.Lock object at 0x10c064990 [locked, waiters:1]> is bound to a different event loop")
     futures = []
     for i in range(3):
-        with PopPushAsyncManagerContext(group_name) as (rag, loop):
+        async with PopPushAsyncManagerContext(group_name) as (rag, loop):
             logging.info(f"get async object: {rag.name}")
             rag: MockAsyncLockRAG
             
@@ -152,11 +153,11 @@ def test_hash_async_object_context():
                 rag.lock_insert("test content", ids=["1", "2"], workspace="test_session2"),
                 loop
             )
-            futures.append(future)
+            result = await asyncio.wrap_future(future)
+            logging.info(f"result: {result}")
 
-    for future in futures:
-        result = future.result()
-        logging.info(f"result: {result}")
+            logging.info(f"running coros: {get_running_coros()}")
+
 
 
 #################################################################################
@@ -268,15 +269,15 @@ def test_improved_context():
 
 if __name__ == "__main__":
     # best usage
-    # test_run_coro_with_manager()
-    # time.sleep(1)
-    # print("="*100)
+    test_run_coro_with_manager()
+    time.sleep(1)
+    print("="*100)
 
     # test_basic_async_object_context()
     # time.sleep(1)
     # print("="*100)
 
-    test_hash_async_object_context()
+    asyncio.run(test_hash_async_object_context())
     time.sleep(1)
     print("="*100)
 

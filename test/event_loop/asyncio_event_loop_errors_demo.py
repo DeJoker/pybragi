@@ -102,6 +102,8 @@ def demo_1_standard_asyncio():
     async def create_standard_lock():
         global lock
         lock = asyncio.Lock()
+        lll = lock._get_loop()
+        print(f"    standard lock bound event loop: {lll}")
         print("✅ standard lock created")
     
     async def use_standard_lock():

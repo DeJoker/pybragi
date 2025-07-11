@@ -1,5 +1,13 @@
+# this file implement the async_manager with thread bind event loop
+
+#  thread bind event_loop and async_object.  these three are one-to-one mapping.
+#  for some async_object, it has own asyncio.Lock, so it can be used in different event loop.
+
+# if you 
+
 import asyncio
 from contextlib import ContextDecorator
+from datetime import datetime
 import logging
 from pybragi.base.hash import djb2_hash
 import threading
@@ -105,11 +113,20 @@ def get_async_length_from_manager(group_name: str):
     return len(async_object_group_map[group_name])
 
 
+from pybragi.base.counter import RunningStatus
+running_coros = RunningStatus()
 
+def get_running_coros():
+    return running_coros.get_active_tasks()
 
-def run_coro_with_manager(coro, *, group_name: str, async_obj: Any, loop: asyncio.AbstractEventLoop, callback=None, return_to_manager: bool = False):
+def run_coro_with_manager(coro, *, group_name: str, async_obj: Any, loop: asyncio.AbstractEventLoop, callback=None, unique_id: str = None, return_to_manager: bool = False):
+    if not unique_id:
+        unique_id = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+    running_coros.run(unique_id)
+
     def done_callback(future):
         try:
+            running_coros.finish(unique_id)
             if callback:
                 callback(future)
         finally:
@@ -127,7 +144,7 @@ class PopPushAsyncManagerContext(ContextDecorator):
     def __init__(self, group_name: str, timeout: Optional[float] = None):
         self.group_name = group_name
         self.semaphore: threading.Semaphore = async_object_group_semaphore[group_name]
-        self.timeout = timeout
+        self.timeout = timeout if timeout is not None else int(1e3)
         self._async_obj: Any = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
 

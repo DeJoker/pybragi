@@ -3,9 +3,10 @@ import logging
 import time
 import traceback
 
-from pybragi.base.async_manager import (
+from pybragi.base.thread_bind_async_manager import (
     AsyncManagerError,
-    PopPushAsyncManagerContext, 
+    PopPushAsyncManagerContext,
+    get_running_coros, 
     init_async_manager,
 )
 # logging.getLogger().setLevel(logging.DEBUG)
@@ -28,6 +29,8 @@ class SimpleTask:
             try:
                 async with PopPushAsyncManagerContext(group_name="test_group", timeout=ttt) as (async_obj, loop):
                     logging.info(f"Task {self.task_id} acquired context: obj={id(async_obj)}, loop={id(loop)}")
+
+                    logging.info(f"running coros: {get_running_coros()}")
                     
                     future = asyncio.run_coroutine_threadsafe(self._actual_work(), loop)
                     await asyncio.wrap_future(future)

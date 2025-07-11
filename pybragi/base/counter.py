@@ -14,16 +14,14 @@ class RunningStatus:
     #  运行一段时间后出现 count 只增不减  -1 没有正确调用
     @contextmanager
     def mark_running(self, tracking_id=""):
-        with self.lock:
-            self.running_count += 1
-            self.active_tasks.append(tracking_id)
+        if not tracking_id:
+            tracking_id = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        self.run(tracking_id)
         
         try:
             yield
         finally:
-            with self.lock:
-                self.running_count -= 1
-                self.active_tasks.remove(tracking_id)
+            self.finish(tracking_id)
     
     def run(self, tracking_id=""):
         with self.lock:
@@ -47,8 +45,6 @@ class RunningStatus:
         @wraps(func)
         def wrapper(*args, **kwargs):
             tracking_id = kwargs.get(self.tracking_name) 
-            if tracking_id is None:
-                tracking_id = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
             
             with self.mark_running(tracking_id):
                 return func(*args, **kwargs)
@@ -57,6 +53,7 @@ class RunningStatus:
 
 
 if __name__ == "__main__":
+    from pybragi.base.log import print_info_once
     import logging
     import time, sys
     import random, uuid

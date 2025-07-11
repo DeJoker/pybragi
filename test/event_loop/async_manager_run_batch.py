@@ -2,7 +2,7 @@
 import asyncio
 import time
 
-from pybragi.base.async_manager import (
+from pybragi.base.thread_bind_async_manager import (
     PopPushAsyncManagerContext, HashAsyncManagerContext, 
     get_all_async_objects_from_manager, get_async_length_from_manager, init_async_manager, 
     _bind_async_object_to_manager, run_coro_with_manager,

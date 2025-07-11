@@ -4,6 +4,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import os
 from datetime import datetime
+from functools import lru_cache
 
 format = "%(levelname)s %(asctime)s.%(msecs)03d [%(process)d-%(threadName)s] (%(funcName)s@%(filename)s:%(lineno)03d) %(message)s"
 datefmt = "%Y-%m-%d %H:%M:%S"
@@ -15,6 +16,22 @@ logging.basicConfig(format=format, datefmt=datefmt, level=logging.INFO, force=Tr
 
 from pybragi.version import __version__
 logging.info(f"init log. pybragi version: {__version__}")
+
+
+@lru_cache
+def print_info_once(msg: str) -> None:
+    logging.info(msg)
+
+@lru_cache
+def print_warning_once(msg: str) -> None:
+    logging.warning(msg)
+
+@lru_cache
+def print_error_once(msg: str) -> None:
+    logging.error(msg)
+
+
+
 
 def use_loguru():
     from loguru import logger
