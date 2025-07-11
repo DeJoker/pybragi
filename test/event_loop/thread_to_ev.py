@@ -51,7 +51,7 @@ async def get_ids_in_executor(session_id: str):
         get_ids(session_id),
         get_global_asyncpg_loop()
     )
-    ids = await asyncio.wrap_future(asyncpg_future)
+    ids = asyncpg_future.result()
 
 
 

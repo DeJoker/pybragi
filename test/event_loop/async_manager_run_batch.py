@@ -22,10 +22,8 @@ class OneLongTask:
 
     async def run(self):
         with PopPushAsyncManagerContext(group_name="one_long_task") as (async_obj, loop):
-            # 使用获取到的 event loop 来运行协程
             future = asyncio.run_coroutine_threadsafe(async_obj._actual_work(), loop)
-            # 等待子线程中的协程完成
-            await asyncio.wrap_future(future)
+            future.result()
 
 async def init_one_long_task():
     await asyncio.sleep(0.01)

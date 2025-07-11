@@ -1,8 +1,10 @@
 import asyncio
 import logging
 import time
+import traceback
 
 from pybragi.base.async_manager import (
+    AsyncManagerError,
     PopPushAsyncManagerContext, 
     init_async_manager,
 )
@@ -19,14 +21,27 @@ class SimpleTask:
 
     async def run(self):
         logging.info(f"Task {self.task_id} trying to acquire context...")
-        with PopPushAsyncManagerContext(group_name="test_group") as (async_obj, loop):
-            logging.info(f"Task {self.task_id} acquired context: obj={id(async_obj)}, loop={id(loop)}")
-            
-            future = asyncio.run_coroutine_threadsafe(self._actual_work(), loop)
-            # await asyncio.wrap_future(future)
-            future.result()
+        
 
-            logging.info(f"Task {self.task_id} completed!")
+        ttt = 0.2 # larger than 0.3 not issue AsyncManagerError
+        while True:
+            try:
+                async with PopPushAsyncManagerContext(group_name="test_group", timeout=ttt) as (async_obj, loop):
+                    logging.info(f"Task {self.task_id} acquired context: obj={id(async_obj)}, loop={id(loop)}")
+                    
+                    future = asyncio.run_coroutine_threadsafe(self._actual_work(), loop)
+                    await asyncio.wrap_future(future)
+                    # future.result() # block in MainThread.    async should use await way
+
+                    logging.info(f"Task {self.task_id} completed!")
+                    break
+                    
+            except AsyncManagerError as e:
+                logging.info(f"Task {self.task_id} waiting for resources...")
+                await asyncio.sleep(0.01)
+                continue
+            except:
+                traceback.print_exc()
 
 async def init_dummy_object():
     await asyncio.sleep(0.01)
