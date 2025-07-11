@@ -8,12 +8,19 @@ from typing import Any, Callable, Tuple, Optional
 
 
 async_object_group_map = {}
-def _bind_async_object_to_manager(group_name: str, async_object: Any, loop: asyncio.AbstractEventLoop):
+async_object_group_semaphore = {}
+
+def _bind_async_object_to_manager(group_name: str, async_object: Any, loop: asyncio.AbstractEventLoop, notify: bool = False):
     global async_object_group_map
+    
     if group_name not in async_object_group_map:
         async_object_group_map[group_name] = []
     async_object_group_map[group_name].append((async_object, loop))
     logging.debug(f"bound to queue {group_name} length: {len(async_object_group_map[group_name])}")
+    if notify:
+        global async_object_group_semaphore
+        semaphore: threading.Semaphore = async_object_group_semaphore[group_name]
+        semaphore.release()
 
 
 def _new_loop_bind_async_to_manager(group_name: str, initialize_async_object: Callable):
@@ -35,6 +42,9 @@ def init_async_manager(group_name: str, thread_count: int, initialize_async_obje
         thread = threading.Thread(target=_new_loop_bind_async_to_manager, args=(group_name, initialize_async_object), daemon=True)
         thread.start()
 
+    global async_object_group_semaphore
+    async_object_group_semaphore[group_name] = threading.Semaphore(thread_count)
+
     while len(get_all_async_objects_from_manager(group_name)) < thread_count:
         time.sleep(0.1)
     logging.info(f"async {group_name} in subthraed, run count: {thread_count}")
@@ -50,6 +60,20 @@ def pop_async_object_from_manager(group_name: str) -> Tuple[Any, asyncio.Abstrac
     
     async_object, loop = async_object_group_map[group_name].pop(0)
     return async_object, loop
+
+def wait_pop_async_object_from_manager(group_name: str, timeout: Optional[float] = None) -> Tuple[Any, asyncio.AbstractEventLoop]:
+    global async_object_group_map, async_object_group_semaphore
+    
+    if group_name not in async_object_group_map:
+        return None, None
+    
+    semaphore: threading.Semaphore = async_object_group_semaphore[group_name]
+    
+    with semaphore:
+        async_object, loop = async_object_group_map[group_name].pop(0)
+        logging.debug(f"get async object: {group_name}, remaining: {len(async_object_group_map[group_name])}")
+        return async_object, loop
+
 
 def hash_async_object_from_manager(group_name: str, key=None) -> Tuple[Any, asyncio.AbstractEventLoop]:
     global async_object_group_map
@@ -97,21 +121,25 @@ def run_coro_with_manager(coro, *, group_name: str, async_obj: Any, loop: asynci
 
 # unique and exclusive for static async_manager, use in async_object not has asyncio.Lock
 class PopPushAsyncManagerContext(ContextDecorator):
-    def __init__(self, group_name: str):
+    def __init__(self, group_name: str, timeout: Optional[float] = None):
         self.group_name = group_name
+        self.semaphore: threading.Semaphore = async_object_group_semaphore[group_name]
+        self.timeout = timeout
         self._async_obj: Any = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
 
     def __enter__(self) -> Tuple[Any, asyncio.AbstractEventLoop]:
-        self._async_obj, self._loop = pop_async_object_from_manager(self.group_name)
+        self.semaphore.acquire()
+        self._async_obj, self._loop = wait_pop_async_object_from_manager(self.group_name, self.timeout)
         if self._async_obj is None:
-            raise RuntimeError(f"No available asynchronous object in group '{self.group_name}'")
+            raise RuntimeError(f"cannot get async object: '{self.group_name}' timeout: {self.timeout}")
         logging.debug(f"Asynchronous object {id(self._async_obj)} and event loop {id(self._loop)} obtained from queue '{self.group_name}'.")
         return self._async_obj, self._loop
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.semaphore.release()
         if self._async_obj is not None and self._loop is not None:
-            _bind_async_object_to_manager(self.group_name, self._async_obj, self._loop)
+            _bind_async_object_to_manager(self.group_name, self._async_obj, self._loop, notify=True)
             logging.debug(f"Asynchronous object {id(self._async_obj)} and event loop {id(self._loop)} returned to queue '{self.group_name}'.")
         else:
             logging.warning(f"Attempting to return an empty asynchronous object or event loop to queue '{self.group_name}'. This may indicate a logical error.")

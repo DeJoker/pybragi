@@ -6,7 +6,7 @@ import time
 from contextlib import ContextDecorator
 from datetime import datetime
 import inspect
-from functools import wraps, partial
+from functools import lru_cache, wraps, partial
 import traceback
 from typing import Callable, Optional
 
@@ -125,4 +125,14 @@ def pretty_delta(total_seconds=0):
         delta_ts = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
         
     return delta.days, delta_ts, from_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+@lru_cache
+def print_warning_once(msg: str) -> None:
+    logging.warning(msg)
+
+@lru_cache
+def print_error_once(msg: str) -> None:
+    logging.error(msg)
+
 
