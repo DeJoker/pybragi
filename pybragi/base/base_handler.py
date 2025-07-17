@@ -7,7 +7,7 @@ from typing import Callable, Optional
 from tornado import web, ioloop
 
 import asyncio
-from pybragi.base import metrics
+from pybragi.base import metrics, ps
 from pybragi.bragi_config import BragiConfig
 from pybragi.base.shutdown import global_exit_event
 
@@ -90,17 +90,21 @@ def make_tornado_web(service: str, big_latency=False, kafka=False):
     )
     return app
 
-def run_tornado_app(app: web.Application, port=8888):
+def run_tornado_app(app: web.Application, port=8888, ipv4 = ps.get_ipv4()):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
-    # asyncio.get_event_loop()
     app.listen(port)
 
-    from pybragi.base import ps
-    ipv4 = ps.get_ipv4()
-    logging.info(f"Tornado app started on port http://{ipv4}:{port}")
+    logging.info(f"Tornado app started on port http://0.0.0.0:{port} ipv4: {ipv4}")
     ioloop.IOLoop.current().start()
+
+async def run_tornado_app_async(app: web.Application, port=8888, ipv4 = ps.get_ipv4()):
+    app.listen(port)
+    
+    logging.info(f"Tornado app started on port http://0.0.0.0:{port} ipv4: {ipv4}")
+    await asyncio.Future()
+
 
 # 1. 无法退出可能是启动的 threading join.  失效其中一个原因是   使用了 finally: continue  否则线程无法退出
 # 2. 最好在 main 结束打印一个日志 有日志就是正确退出
