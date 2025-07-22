@@ -66,6 +66,23 @@ def elapsed_time_limit(limit, callback: Optional[Callable] = None):
     return decorator
 
 
+def async_elapsed_time(limit, callback: Optional[Callable] = None):
+    def decorator(func):
+        @wraps(func)
+        async def inner(*args, **kwargs):
+            start = time.perf_counter()
+            res = await func(*args, **kwargs)
+            end = time.perf_counter()
+
+            if end-start > limit:
+                logging.warning(f'{func.__module__}.{func.__name__} cost {end-start:.3f} sec')
+            
+            if callback:
+                callback(end-start) 
+            return res
+        return inner
+    return decorator
+
 executor_timeout = ThreadPoolExecutor(max_workers=1)
 def timeout_limit(timeout):
     def decorator(func):
@@ -107,6 +124,22 @@ class ElapseCtx(ContextDecorator):
         if self.callback:
             self.callback(elapse)
 
+
+class AsyncElapseCtx(ContextDecorator):
+    def __init__(self, label: str = "", gt=0.0, callback=None):
+        self.label = label
+        self.gt = gt
+        self.callback = callback
+
+    async def __aenter__(self):
+        self.t0 = time.perf_counter()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        elapse = round(time.perf_counter()-self.t0, 3)
+        if elapse >= self.gt:
+            logging.info(f'{self.label} cost: {elapse:.3f}s')
+        if self.callback:
+            self.callback(elapse)
 
 
 #######################################################################
